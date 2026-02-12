@@ -25,8 +25,8 @@ def create_app(config_object="config.Config"):
 
     app.register_blueprint(main_bp)
 
-    # Only auto-create tables when not using migrations (e.g. testing)
-    if app.config.get("SQLALCHEMY_DATABASE_URI", "").startswith("sqlite"):
+    # Auto-create tables for testing; production uses flask db upgrade
+    if app.config.get("TESTING"):
         with app.app_context():
             db.create_all()
 
