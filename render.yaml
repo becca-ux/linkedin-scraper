@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: hook-talent-pipeline
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:application
+    envVars:
+      - key: AMPLEMARKET_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        value: sqlite:///candidates.db
+      - key: PYTHON_VERSION
+        value: "3.12"

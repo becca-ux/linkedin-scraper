@@ -1,0 +1,18 @@
+# Web framework
+flask==3.1.0
+gunicorn==23.0.0
+
+# Database
+flask-sqlalchemy==3.1.1
+
+# Amplemarket API
+requests==2.32.3
+
+# Claude API
+anthropic==0.43.0
+
+# Scheduling
+apscheduler==3.10.4
+
+# Environment
+python-dotenv==1.0.1

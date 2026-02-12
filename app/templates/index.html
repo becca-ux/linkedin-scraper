@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+
+<form class="filters" method="GET" action="/">
+    <select name="role">
+        <option value="">All Roles</option>
+        {% for role in roles %}
+        <option value="{{ role.title }}" {% if current_role == role.title %}selected{% endif %}>
+            {{ role.title }}
+        </option>
+        {% endfor %}
+    </select>
+    <input type="number" name="min_score" placeholder="Min score" min="1" max="10" step="0.5"
+           value="{{ current_min_score or '' }}">
+    <button type="submit">Filter</button>
+</form>
+
+{% if candidates %}
+<table>
+    <thead>
+        <tr>
+            <th>Score</th>
+            <th>Name</th>
+            <th>Title</th>
+            <th>Company</th>
+            <th>Role</th>
+            <th>Outreach</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for c in candidates %}
+        <tr>
+            <td>
+                <span class="score-badge {% if c.score >= 7 %}score-high{% elif c.score >= 5 %}score-mid{% else %}score-low{% endif %}">
+                    {{ "%.1f"|format(c.score) }}
+                </span>
+            </td>
+            <td><a href="/candidate/{{ c.id }}">{{ c.full_name }}</a></td>
+            <td>{{ c.current_title or '—' }}</td>
+            <td>{{ c.current_company or '—' }}</td>
+            <td>{{ c.target_role or '—' }}</td>
+            <td>{% if c.outreach_message %}Ready{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty-state">
+    <h2>No candidates yet</h2>
+    <p>Trigger a scoring run via the API to get started.</p>
+    <pre style="text-align:left; display:inline-block; margin-top:16px; background:#1d1d1f; color:#fff; padding:16px; border-radius:8px; font-size:13px;">
+curl -X POST {{ request.url_root }}api/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "list_id": "YOUR_AMPLEMARKET_LIST_ID",
+    "role_key": "account_manager"
+  }'</pre>
+</div>
+{% endif %}
+
+{% if recent_runs %}
+<div class="card" style="margin-top: 32px;">
+    <h2>Recent Scoring Runs</h2>
+    <table>
+        <thead>
+            <tr><th>Role</th><th>Candidates</th><th>Avg Score</th><th>Status</th><th>Date</th></tr>
+        </thead>
+        <tbody>
+            {% for run in recent_runs %}
+            <tr>
+                <td>{{ run.target_role }}</td>
+                <td>{{ run.candidates_scored }}</td>
+                <td>{{ "%.1f"|format(run.avg_score or 0) }}</td>
+                <td>{{ run.status }}</td>
+                <td>{{ run.started_at.strftime('%Y-%m-%d %H:%M') if run.started_at else '—' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% endblock %}

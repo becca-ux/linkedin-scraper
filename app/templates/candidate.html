@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}{{ candidate.full_name }}{% endblock %}
+{% block content %}
+
+<a href="/" class="back-link">&larr; Back to Dashboard</a>
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+    <div>
+        <div class="card">
+            <h2>
+                {{ candidate.full_name }}
+                <span class="score-badge {% if candidate.score >= 7 %}score-high{% elif candidate.score >= 5 %}score-mid{% else %}score-low{% endif %}" style="margin-left:8px;">
+                    {{ "%.1f"|format(candidate.score) }}/10
+                </span>
+            </h2>
+            <p style="color:#86868b; margin-top:4px;">
+                {{ candidate.current_title or '' }}
+                {% if candidate.current_company %} at {{ candidate.current_company }}{% endif %}
+            </p>
+        </div>
+
+        <div class="card">
+            <h2>Score Reasoning</h2>
+            <p>{{ candidate.score_reasoning or 'No reasoning available.' }}</p>
+        </div>
+
+        {% if candidate.outreach_message %}
+        <div class="card">
+            <h2>Outreach Message</h2>
+            <div class="outreach-box">{{ candidate.outreach_message }}</div>
+        </div>
+        {% endif %}
+
+        {% if candidate.experience_summary %}
+        <div class="card">
+            <h2>Experience</h2>
+            <pre style="white-space:pre-wrap; font-family:inherit;">{{ candidate.experience_summary }}</pre>
+        </div>
+        {% endif %}
+    </div>
+
+    <div>
+        <div class="card">
+            <div class="sidebar-section">
+                <h3>Role</h3>
+                <p>{{ candidate.target_role or '—' }}</p>
+            </div>
+            <div class="sidebar-section">
+                <h3>Location</h3>
+                <p>{{ candidate.location or '—' }}</p>
+            </div>
+            <div class="sidebar-section">
+                <h3>Email</h3>
+                <p>{{ candidate.email or '—' }}</p>
+            </div>
+            {% if candidate.linkedin_url %}
+            <div class="sidebar-section">
+                <h3>LinkedIn</h3>
+                <p><a href="{{ candidate.linkedin_url }}" target="_blank">View Profile</a></p>
+            </div>
+            {% endif %}
+            <div class="sidebar-section">
+                <h3>Scored</h3>
+                <p>{{ candidate.scored_at.strftime('%Y-%m-%d %H:%M') if candidate.scored_at else '—' }}</p>
+            </div>
+            <div class="sidebar-section">
+                <h3>Source List</h3>
+                <p>{{ candidate.source_list or '—' }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
