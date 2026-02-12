@@ -4,6 +4,7 @@ import json
 import logging
 
 import anthropic
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from app.scoring.profiles import format_profile_for_prompt
 
@@ -30,6 +31,22 @@ You must respond with valid JSON only, in this exact format:
   "outreach_angle": "<one sentence suggesting the best hook for outreach>"
 }
 """
+
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=2, min=2, max=30),
+    retry=retry_if_exception_type((anthropic.APIStatusError, anthropic.APIConnectionError)),
+    reraise=True,
+)
+def _call_claude(client, system: str, user_message: str):
+    """Call Claude with automatic retry on transient errors."""
+    return client.messages.create(
+        model="claude-sonnet-4-5-20250929",
+        max_tokens=1024,
+        system=system,
+        messages=[{"role": "user", "content": user_message}],
+    )
 
 
 def score_candidate(
@@ -70,12 +87,7 @@ def score_candidate(
 Score this candidate against the profile above. Return JSON only.
 """
 
-    response = client.messages.create(
-        model="claude-sonnet-4-5-20250929",
-        max_tokens=1024,
-        system=SCORING_SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": user_message}],
-    )
+    response = _call_claude(client, SCORING_SYSTEM_PROMPT, user_message)
 
     response_text = response.content[0].text.strip()
 

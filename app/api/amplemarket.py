@@ -3,8 +3,16 @@
 import logging
 
 import requests
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
 
 logger = logging.getLogger(__name__)
+
+
+def _is_retryable_http_error(exc: BaseException) -> bool:
+    """Retry on 429 (rate-limit) and 5xx server errors."""
+    if isinstance(exc, requests.exceptions.HTTPError) and exc.response is not None:
+        return exc.response.status_code == 429 or exc.response.status_code >= 500
+    return isinstance(exc, (requests.exceptions.ConnectionError, requests.exceptions.Timeout))
 
 BASE_URL = "https://api.amplemarket.com/api/v1"
 
@@ -64,6 +72,12 @@ class AmplemarketClient:
         resp = self._get(f"/people/{person_id}")
         return resp.get("data", {})
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=2, min=2, max=30),
+        retry=retry_if_exception(_is_retryable_http_error),
+        reraise=True,
+    )
     def _get(self, path: str, params: dict | None = None) -> dict:
         url = f"{BASE_URL}{path}"
         resp = self.session.get(url, params=params, timeout=30)

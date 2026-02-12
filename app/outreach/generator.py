@@ -3,6 +3,7 @@
 import logging
 
 import anthropic
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,22 @@ Guidelines:
 - Don't oversell — be honest about the stage and opportunity
 - End with a low-pressure ask (quick chat, not "apply now")
 """
+
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=2, min=2, max=30),
+    retry=retry_if_exception_type((anthropic.APIStatusError, anthropic.APIConnectionError)),
+    reraise=True,
+)
+def _call_claude(client, system: str, user_message: str):
+    """Call Claude with automatic retry on transient errors."""
+    return client.messages.create(
+        model="claude-sonnet-4-5-20250929",
+        max_tokens=512,
+        system=system,
+        messages=[{"role": "user", "content": user_message}],
+    )
 
 
 def generate_outreach(
@@ -62,11 +79,5 @@ Name: {candidate_name}
 Write the outreach message. Return just the message text, nothing else.
 """
 
-    response = client.messages.create(
-        model="claude-sonnet-4-5-20250929",
-        max_tokens=512,
-        system=OUTREACH_SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": user_message}],
-    )
-
+    response = _call_claude(client, OUTREACH_SYSTEM_PROMPT, user_message)
     return response.content[0].text.strip()
