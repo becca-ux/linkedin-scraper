@@ -1,8 +1,9 @@
 {% extends "base.html" %}
-{% block title %}LinkedIn Search{% endblock %}
+{% block title %}Score Candidates{% endblock %}
 {% block content %}
 
-<h2 style="margin-bottom: 20px;">LinkedIn Candidate Search</h2>
+<h2 style="margin-bottom: 20px;">Score a Candidate</h2>
+<p style="color:#86868b; margin-bottom:20px;">Paste a CV or LinkedIn profile text below. Claude will score them against your ideal candidate profiles and write personalised outreach for top scorers.</p>
 
 {% if error %}
 <div style="background: #f8d7da; color: #721c24; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px;">
@@ -11,17 +12,40 @@
 {% endif %}
 
 {% if result %}
-<div style="background: #d4edda; color: #155724; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px;">
-    Found and scored <strong>{{ result.candidates_scored }}</strong> candidates (avg score: {{ "%.1f"|format(result.avg_score or 0) }}).
-    <a href="/">View on dashboard</a>
+<div class="card" style="margin-bottom: 20px; border-left: 4px solid {% if result.score >= 7 %}#28a745{% elif result.score >= 5 %}#ffc107{% else %}#dc3545{% endif %};">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h2 style="margin:0;">{{ result.name }}</h2>
+        <span class="score-badge {% if result.score >= 7 %}score-high{% elif result.score >= 5 %}score-mid{% else %}score-low{% endif %}" style="font-size:16px;">
+            {{ "%.1f"|format(result.score) }}/10
+        </span>
+    </div>
+    <p><strong>Reasoning:</strong> {{ result.reasoning }}</p>
+
+    {% if result.strengths %}
+    <p style="margin-top:8px;"><strong>Strengths:</strong> {{ result.strengths | join(', ') }}</p>
+    {% endif %}
+    {% if result.concerns %}
+    <p style="margin-top:4px;"><strong>Concerns:</strong> {{ result.concerns | join(', ') }}</p>
+    {% endif %}
+
+    {% if result.outreach %}
+    <div style="margin-top:16px;">
+        <h3>Outreach Message</h3>
+        <div class="outreach-box" style="margin-top:8px;">{{ result.outreach }}</div>
+    </div>
+    {% endif %}
+
+    <p style="margin-top:12px; font-size:13px; color:#86868b;">
+        Saved to dashboard. <a href="/candidate/{{ result.candidate_id }}">View full profile</a>
+    </p>
 </div>
 {% endif %}
 
 <div class="card">
     <form method="POST" action="/search">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
             <div>
-                <label style="display:block; font-size:13px; color:#86868b; margin-bottom:4px;">Hiring for role</label>
+                <label style="display:block; font-size:13px; color:#86868b; margin-bottom:4px;">Scoring against role</label>
                 <select name="role_key" style="width:100%; padding:8px 12px; border:1px solid #d2d2d7; border-radius:8px; font-size:14px;">
                     {% for key, profile in role_keys.items() %}
                     <option value="{{ key }}">{{ profile.title }}</option>
@@ -29,42 +53,25 @@
                 </select>
             </div>
             <div>
-                <label style="display:block; font-size:13px; color:#86868b; margin-bottom:4px;">LinkedIn job title to search</label>
-                <input type="text" name="role_title" placeholder="e.g. Account Executive" required
-                       style="width:100%; padding:8px 12px; border:1px solid #d2d2d7; border-radius:8px; font-size:14px;">
-            </div>
-            <div>
-                <label style="display:block; font-size:13px; color:#86868b; margin-bottom:4px;">City</label>
-                <input type="text" name="city" value="London" style="width:100%; padding:8px 12px; border:1px solid #d2d2d7; border-radius:8px; font-size:14px;">
-            </div>
-            <div>
-                <label style="display:block; font-size:13px; color:#86868b; margin-bottom:4px;">Country code</label>
-                <input type="text" name="country" value="GB" style="width:100%; padding:8px 12px; border:1px solid #d2d2d7; border-radius:8px; font-size:14px;">
-            </div>
-            <div>
-                <label style="display:block; font-size:13px; color:#86868b; margin-bottom:4px;">Keyword (optional)</label>
-                <input type="text" name="keyword" placeholder="e.g. SaaS, startup, Series A"
-                       style="width:100%; padding:8px 12px; border:1px solid #d2d2d7; border-radius:8px; font-size:14px;">
-            </div>
-            <div>
-                <label style="display:block; font-size:13px; color:#86868b; margin-bottom:4px;">Results (max 25)</label>
-                <input type="number" name="page_size" value="10" min="1" max="25"
+                <label style="display:block; font-size:13px; color:#86868b; margin-bottom:4px;">Candidate name</label>
+                <input type="text" name="candidate_name" placeholder="e.g. Jane Doe" required
                        style="width:100%; padding:8px 12px; border:1px solid #d2d2d7; border-radius:8px; font-size:14px;">
             </div>
         </div>
+        <div style="margin-bottom:16px;">
+            <label style="display:block; font-size:13px; color:#86868b; margin-bottom:4px;">LinkedIn URL (optional)</label>
+            <input type="text" name="linkedin_url" placeholder="https://linkedin.com/in/..."
+                   style="width:100%; padding:8px 12px; border:1px solid #d2d2d7; border-radius:8px; font-size:14px;">
+        </div>
+        <div style="margin-bottom:16px;">
+            <label style="display:block; font-size:13px; color:#86868b; margin-bottom:4px;">Paste CV / LinkedIn profile text</label>
+            <textarea name="candidate_text" rows="12" required placeholder="Paste the candidate's CV, LinkedIn summary, or any profile text here..."
+                      style="width:100%; padding:12px; border:1px solid #d2d2d7; border-radius:8px; font-size:14px; font-family:inherit; resize:vertical;"></textarea>
+        </div>
         <button type="submit" style="padding:10px 24px; background:#0071e3; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600;">
-            Search LinkedIn
+            Score Candidate
         </button>
     </form>
-</div>
-
-<div class="card" style="margin-top: 20px;">
-    <h3 style="margin-bottom: 8px;">Search tips</h3>
-    <ul style="font-size: 14px; color: #86868b; padding-left: 20px;">
-        <li><strong>AE search:</strong> Try "Account Executive" or "Enterprise Account Executive" with keyword "SaaS"</li>
-        <li><strong>CSM search:</strong> Try "Customer Success Manager" or "Senior CSM" with keyword "SaaS"</li>
-        <li>Candidates are automatically scored against your ideal profiles and outreach is generated for top scorers (7+)</li>
-    </ul>
 </div>
 
 {% endblock %}

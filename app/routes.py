@@ -7,9 +7,11 @@ from flask import Blueprint, current_app, jsonify, render_template, request
 
 from app import db
 from app.models import Candidate, ScoringRun
+from app.outreach.generator import generate_outreach
 from app.pipeline import run_scoring_pipeline, run_linkedin_search_pipeline
 from app.scheduler import schedule_scoring_run, _scheduled_jobs
-from app.scoring.profiles import ROLE_PROFILES
+from app.scoring.profiles import ROLE_PROFILES, get_profile, get_example_cvs
+from app.scoring.scorer import score_candidate
 
 main_bp = Blueprint("main", __name__)
 
@@ -188,36 +190,88 @@ def linkedin_search():
 
 @main_bp.route("/search", methods=["GET", "POST"])
 def search_page():
-    """LinkedIn search form and results."""
+    """Paste a CV / profile text, score it, and generate outreach."""
+    from datetime import datetime, timezone
+    import hashlib
+
     result = None
     error = None
 
     if request.method == "POST":
         role_key = request.form.get("role_key")
-        role_title = request.form.get("role_title", "").strip()
-        city = request.form.get("city", "London").strip()
-        country = request.form.get("country", "GB").strip()
-        keyword = request.form.get("keyword", "").strip() or None
-        page_size = int(request.form.get("page_size", 10))
+        candidate_name = request.form.get("candidate_name", "").strip()
+        candidate_text = request.form.get("candidate_text", "").strip()
+        linkedin_url = request.form.get("linkedin_url", "").strip() or None
 
         config = current_app.config
-        if not config.get("PROXYCURL_API_KEY"):
-            error = "PROXYCURL_API_KEY not configured. Add it in your environment variables."
-        elif not role_key or not role_title:
-            error = "Role and job title search are required."
+        if not config.get("ANTHROPIC_API_KEY"):
+            error = "ANTHROPIC_API_KEY not configured."
+        elif not role_key or not candidate_name or not candidate_text:
+            error = "Role, candidate name, and profile text are all required."
         else:
             try:
-                run = run_linkedin_search_pipeline(
-                    proxycurl_api_key=config["PROXYCURL_API_KEY"],
-                    anthropic_api_key=config["ANTHROPIC_API_KEY"],
-                    role_key=role_key,
-                    role_title_search=role_title,
-                    country=country,
-                    city=city,
-                    keyword=keyword,
-                    page_size=min(page_size, 25),
+                profile = get_profile(role_key)
+                example_cvs = get_example_cvs(role_key)
+
+                # Score with Claude
+                score_result = score_candidate(
+                    config["ANTHROPIC_API_KEY"],
+                    f"Name: {candidate_name}\n\n{candidate_text}",
+                    role_key,
+                    example_cvs,
                 )
-                result = run
+
+                # Generate unique ID from name + text
+                text_hash = hashlib.md5(
+                    f"{candidate_name}{candidate_text[:200]}".encode()
+                ).hexdigest()[:12]
+                candidate_id = f"paste_{text_hash}"
+
+                # Store in DB
+                existing = Candidate.query.filter_by(amplemarket_id=candidate_id).first()
+                if existing:
+                    candidate = existing
+                else:
+                    candidate = Candidate(
+                        amplemarket_id=candidate_id,
+                        full_name=candidate_name,
+                    )
+                    db.session.add(candidate)
+
+                candidate.linkedin_url = linkedin_url
+                candidate.experience_summary = candidate_text
+                candidate.score = score_result.get("score", 0)
+                candidate.score_reasoning = score_result.get("reasoning", "")
+                candidate.target_role = profile["title"]
+                candidate.scored_at = datetime.now(timezone.utc)
+                candidate.source_list = "manual_paste"
+                candidate.raw_data = {"source": "manual_paste"}
+
+                # Generate outreach for good candidates
+                outreach = None
+                if candidate.score >= 7.0:
+                    outreach = generate_outreach(
+                        api_key=config["ANTHROPIC_API_KEY"],
+                        candidate_name=candidate_name,
+                        candidate_info=candidate_text,
+                        role_title=profile["title"],
+                        score_reasoning=candidate.score_reasoning,
+                        outreach_angle=score_result.get("outreach_angle", ""),
+                    )
+                    candidate.outreach_message = outreach
+                    candidate.outreach_generated_at = datetime.now(timezone.utc)
+
+                db.session.commit()
+
+                result = {
+                    "name": candidate_name,
+                    "score": candidate.score,
+                    "reasoning": score_result.get("reasoning", ""),
+                    "strengths": score_result.get("strengths", []),
+                    "concerns": score_result.get("concerns", []),
+                    "outreach": outreach,
+                    "candidate_id": candidate.id,
+                }
             except Exception as e:
                 error = str(e)
 

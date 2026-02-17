@@ -94,16 +94,42 @@ class TestLinkedInClient:
         assert profile["full_name"] == "Jane Doe"
 
 
-class TestLinkedInSearchRoute:
+class TestScoreCandidateRoute:
     def test_search_page_get(self, client):
         resp = client.get("/search")
         assert resp.status_code == 200
-        assert b"LinkedIn Candidate Search" in resp.data
+        assert b"Score a Candidate" in resp.data
 
-    def test_search_page_missing_proxycurl_key(self, client):
+    def test_search_page_requires_fields(self, client):
         resp = client.post("/search", data={
             "role_key": "ae",
-            "role_title": "Account Executive",
+            "candidate_name": "",
+            "candidate_text": "",
         })
         assert resp.status_code == 200
-        assert b"PROXYCURL_API_KEY not configured" in resp.data
+        assert b"required" in resp.data
+
+    @patch("app.routes.generate_outreach")
+    @patch("app.routes.score_candidate")
+    def test_score_and_store(self, mock_score, mock_outreach, client, db, app):
+        mock_score.return_value = {
+            "score": 8.5,
+            "reasoning": "Strong AE fit",
+            "strengths": ["Full-cycle experience"],
+            "concerns": [],
+            "outreach_angle": "Mention their startup background",
+        }
+        mock_outreach.return_value = "Hi Jane, loved your work at Acme..."
+
+        with app.app_context():
+            app.config["ANTHROPIC_API_KEY"] = "fake-key"
+            resp = client.post("/search", data={
+                "role_key": "ae",
+                "candidate_name": "Jane Doe",
+                "candidate_text": "AE at Acme Corp, 3 years full-cycle SaaS sales",
+                "linkedin_url": "https://linkedin.com/in/janedoe",
+            })
+            assert resp.status_code == 200
+            assert b"8.5" in resp.data
+            assert b"Jane Doe" in resp.data
+            assert b"Strong AE fit" in resp.data
