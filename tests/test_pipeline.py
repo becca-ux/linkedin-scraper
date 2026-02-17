@@ -42,7 +42,7 @@ class TestRunScoringPipeline:
                 amplemarket_api_key="fake",
                 anthropic_api_key="fake",
                 list_id="list1",
-                role_key="account_manager",
+                role_key="ae",
             )
 
             assert run.status == "completed"
@@ -78,7 +78,7 @@ class TestRunScoringPipeline:
                 amplemarket_api_key="fake",
                 anthropic_api_key="fake",
                 list_id="list2",
-                role_key="account_manager",
+                role_key="ae",
             )
 
             assert run.status == "completed"
@@ -99,7 +99,7 @@ class TestRunScoringPipeline:
                     amplemarket_api_key="fake",
                     anthropic_api_key="fake",
                     list_id="list3",
-                    role_key="account_manager",
+                    role_key="ae",
                 )
                 assert False, "Should have raised"
             except Exception:
@@ -140,7 +140,7 @@ class TestRunScoringPipeline:
                 amplemarket_api_key="fake",
                 anthropic_api_key="fake",
                 list_id="list4",
-                role_key="account_manager",
+                role_key="ae",
             )
 
             candidates = Candidate.query.filter_by(amplemarket_id="c3").all()

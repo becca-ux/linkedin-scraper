@@ -36,15 +36,15 @@ class TestDashboard:
 
     def test_index_filter_by_role(self, client, db):
         c1 = Candidate(
-            amplemarket_id="1", full_name="Alice", score=8.0, target_role="Account Manager"
+            amplemarket_id="1", full_name="Alice", score=8.0, target_role="Account Executive"
         )
         c2 = Candidate(
-            amplemarket_id="2", full_name="Bob", score=7.0, target_role="Solutions Consultant"
+            amplemarket_id="2", full_name="Bob", score=7.0, target_role="Customer Success Manager"
         )
         db.session.add_all([c1, c2])
         db.session.commit()
 
-        resp = client.get("/?role=Account Manager")
+        resp = client.get("/?role=Account Executive")
         assert resp.status_code == 200
         assert b"Alice" in resp.data
         assert b"Bob" not in resp.data
@@ -98,7 +98,7 @@ class TestAPICandidates:
             current_title="AE",
             current_company="Acme",
             score=8.0,
-            target_role="Enterprise AE",
+            target_role="Account Executive",
         )
         db.session.add(c)
         db.session.commit()
@@ -152,7 +152,7 @@ class TestAPITriggerRun:
 
     @patch("app.routes.run_scoring_pipeline")
     def test_successful_run(self, mock_pipeline, client, db, api_headers):
-        mock_run = ScoringRun(target_role="account_manager", status="completed")
+        mock_run = ScoringRun(target_role="ae", status="completed")
         mock_run.candidates_scored = 5
         mock_run.avg_score = 7.2
         db.session.add(mock_run)
@@ -163,7 +163,7 @@ class TestAPITriggerRun:
         resp = client.post(
             "/api/run",
             headers=api_headers,
-            json={"list_id": "list123", "role_key": "account_manager"},
+            json={"list_id": "list123", "role_key": "ae"},
         )
         assert resp.status_code == 200
         data = resp.get_json()

@@ -4,13 +4,18 @@ import json
 from unittest.mock import MagicMock, patch
 
 from app.scoring.scorer import score_candidate, format_candidate_for_scoring
-from app.scoring.profiles import get_profile, format_profile_for_prompt, ROLE_PROFILES
+from app.scoring.profiles import get_profile, get_example_cvs, format_profile_for_prompt, ROLE_PROFILES
 
 
 class TestRoleProfiles:
-    def test_get_valid_profile(self):
-        profile = get_profile("account_manager")
-        assert profile["title"] == "Account Manager"
+    def test_get_valid_ae_profile(self):
+        profile = get_profile("ae")
+        assert profile["title"] == "Account Executive"
+        assert len(profile["must_haves"]) > 0
+
+    def test_get_valid_csm_profile(self):
+        profile = get_profile("csm")
+        assert profile["title"] == "Customer Success Manager"
         assert len(profile["must_haves"]) > 0
 
     def test_get_invalid_profile(self):
@@ -28,12 +33,29 @@ class TestRoleProfiles:
             assert "nice_to_haves" in profile
             assert "red_flags" in profile
 
-    def test_format_profile_for_prompt(self):
-        text = format_profile_for_prompt("solutions_consultant")
-        assert "Solutions Consultant" in text
+    def test_format_profile_for_prompt_ae(self):
+        text = format_profile_for_prompt("ae")
+        assert "Account Executive" in text
         assert "Must-Haves:" in text
         assert "Nice-to-Haves:" in text
         assert "Red Flags:" in text
+
+    def test_format_profile_for_prompt_csm(self):
+        text = format_profile_for_prompt("csm")
+        assert "Customer Success Manager" in text
+        assert "Must-Haves:" in text
+
+    def test_get_example_cvs_ae(self):
+        cvs = get_example_cvs("ae")
+        assert "Carson" in cvs
+        assert "Sam Champion" in cvs
+        assert "Charlie" in cvs
+
+    def test_get_example_cvs_csm(self):
+        cvs = get_example_cvs("csm")
+        assert "Lucy" in cvs
+        assert "Katy-Jo" in cvs
+        assert "Adi" in cvs
 
 
 class TestFormatCandidate:
@@ -89,7 +111,7 @@ class TestScoreCandidate:
         ]
         mock_call.return_value = mock_response
 
-        result = score_candidate("fake-key", "Jane Doe, AE at Acme", "account_manager")
+        result = score_candidate("fake-key", "Jane Doe, AE at Acme", "ae")
 
         assert result["score"] == 8
         assert "Strong fit" in result["reasoning"]
@@ -105,7 +127,7 @@ class TestScoreCandidate:
         ]
         mock_call.return_value = mock_response
 
-        result = score_candidate("fake-key", "Candidate info", "enterprise_ae")
+        result = score_candidate("fake-key", "Candidate info", "ae")
         assert result["score"] == 6
 
     @patch("app.scoring.scorer._call_claude")
@@ -114,6 +136,6 @@ class TestScoreCandidate:
         mock_response.content = [MagicMock(text="This is not JSON at all")]
         mock_call.return_value = mock_response
 
-        result = score_candidate("fake-key", "Candidate info", "enterprise_ae")
+        result = score_candidate("fake-key", "Candidate info", "ae")
         assert result["score"] == 0
         assert "Parsing error" in result["reasoning"]

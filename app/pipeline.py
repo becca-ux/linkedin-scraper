@@ -7,6 +7,7 @@ from app import db
 from app.api.amplemarket import AmplemarketClient, normalize_candidate
 from app.models import Candidate, ScoringRun
 from app.outreach.generator import generate_outreach
+from app.scoring.profiles import get_example_cvs
 from app.scoring.scorer import format_candidate_for_scoring, score_candidate
 
 logger = logging.getLogger(__name__)
@@ -32,6 +33,10 @@ def run_scoring_pipeline(
     from app.scoring.profiles import get_profile
 
     profile = get_profile(role_key)
+
+    # Auto-include exemplar CVs for calibration if not explicitly provided
+    if not example_cvs:
+        example_cvs = get_example_cvs(role_key)
 
     run = ScoringRun(target_role=role_key, status="running")
     db.session.add(run)
