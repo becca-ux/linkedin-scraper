@@ -55,19 +55,23 @@ def index():
     role_filter = request.args.get("role")
     min_score = request.args.get("min_score", type=float)
 
-    query = Candidate.query.filter(Candidate.score.isnot(None))
+    try:
+        query = Candidate.query.filter(Candidate.score.isnot(None))
 
-    if role_filter:
-        query = query.filter(Candidate.target_role == role_filter)
-    if min_score:
-        query = query.filter(Candidate.score >= min_score)
+        if role_filter:
+            query = query.filter(Candidate.target_role == role_filter)
+        if min_score:
+            query = query.filter(Candidate.score >= min_score)
 
-    candidates = query.order_by(Candidate.score.desc()).all()
+        candidates = query.order_by(Candidate.score.desc()).all()
+        recent_runs = (
+            ScoringRun.query.order_by(ScoringRun.started_at.desc()).limit(10).all()
+        )
+    except Exception:
+        candidates = []
+        recent_runs = []
 
     roles = list(ROLE_PROFILES.values())
-    recent_runs = (
-        ScoringRun.query.order_by(ScoringRun.started_at.desc()).limit(10).all()
-    )
 
     return render_template(
         "index.html",
