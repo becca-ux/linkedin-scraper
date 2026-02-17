@@ -7,27 +7,31 @@ migrate = Migrate()
 
 
 def create_app(config_object="config.Config"):
-    app = Flask(__name__)
-    app.config.from_object(config_object)
+    application = Flask(__name__)
+    application.config.from_object(config_object)
 
     # Fix Render's postgres:// URL (SQLAlchemy requires postgresql://)
-    uri = app.config.get("SQLALCHEMY_DATABASE_URI", "")
+    uri = application.config.get("SQLALCHEMY_DATABASE_URI", "")
     if uri.startswith("postgres://"):
-        app.config["SQLALCHEMY_DATABASE_URI"] = uri.replace(
+        application.config["SQLALCHEMY_DATABASE_URI"] = uri.replace(
             "postgres://", "postgresql://", 1
         )
 
-    db.init_app(app)
-    migrate.init_app(app, db)
+    db.init_app(application)
+    migrate.init_app(application, db)
 
     from app.models import Candidate, ScoringRun  # noqa: F401
     from app.routes import main_bp
 
-    app.register_blueprint(main_bp)
+    application.register_blueprint(main_bp)
 
     # Auto-create tables for testing; production uses flask db upgrade
-    if app.config.get("TESTING"):
-        with app.app_context():
+    if application.config.get("TESTING"):
+        with application.app_context():
             db.create_all()
 
-    return app
+    return application
+
+
+# Module-level `app` so that `gunicorn app:app` works (Render's default)
+app = create_app()
