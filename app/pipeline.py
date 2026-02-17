@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 from app import db
 from app.api.amplemarket import AmplemarketClient, normalize_candidate
+from app.api.linkedin import LinkedInClient, normalize_linkedin_candidate
 from app.models import Candidate, ScoringRun
 from app.outreach.generator import generate_outreach
 from app.scoring.profiles import get_example_cvs
@@ -124,6 +125,143 @@ def run_scoring_pipeline(
         run.completed_at = datetime.now(timezone.utc)
         db.session.commit()
         logger.exception("Scoring pipeline failed")
+        raise
+
+    return run
+
+
+def run_linkedin_search_pipeline(
+    proxycurl_api_key: str,
+    anthropic_api_key: str,
+    role_key: str,
+    role_title_search: str,
+    country: str = "GB",
+    city: str = "London",
+    keyword: str | None = None,
+    past_role_title: str | None = None,
+    current_company_name: str | None = None,
+    page_size: int = 10,
+    outreach_min_score: float = 7.0,
+) -> ScoringRun:
+    """Search LinkedIn for candidates, score them, and store results.
+
+    1. Search LinkedIn via Proxycurl
+    2. Score each candidate with Claude
+    3. Store in database
+    4. Generate outreach for top scorers
+
+    Returns the ScoringRun record.
+    """
+    from app.scoring.profiles import get_profile
+
+    profile = get_profile(role_key)
+    example_cvs = get_example_cvs(role_key)
+
+    run = ScoringRun(target_role=role_key, status="running")
+    db.session.add(run)
+    db.session.commit()
+
+    try:
+        # 1. Search LinkedIn
+        li_client = LinkedInClient(proxycurl_api_key)
+        results = li_client.search_people(
+            role_title=role_title_search,
+            country=country,
+            city=city,
+            keyword=keyword,
+            past_role_title=past_role_title,
+            current_company_name=current_company_name,
+            page_size=page_size,
+        )
+
+        scored_count = 0
+        total_score = 0.0
+
+        for result in results:
+            linkedin_url = result.get("linkedin_profile_url", "")
+            if not linkedin_url:
+                continue
+
+            # Use enriched profile data if available from search, otherwise fetch
+            profile_data = result.get("profile") or {}
+            if not profile_data or not profile_data.get("full_name"):
+                try:
+                    profile_data = li_client.get_profile(linkedin_url)
+                except Exception:
+                    logger.warning("Failed to enrich %s, skipping", linkedin_url)
+                    continue
+
+            normalized = normalize_linkedin_candidate(profile_data, linkedin_url)
+
+            # Deduplicate by amplemarket_id (which is li_<slug> for LinkedIn)
+            existing = Candidate.query.filter_by(
+                amplemarket_id=normalized["amplemarket_id"]
+            ).first()
+
+            if existing:
+                candidate = existing
+                for key, value in normalized.items():
+                    if key != "raw_data" and value:
+                        setattr(candidate, key, value)
+                candidate.raw_data = normalized["raw_data"]
+            else:
+                candidate = Candidate(**normalized)
+                db.session.add(candidate)
+
+            # 2. Score
+            candidate_text = format_candidate_for_scoring(normalized)
+            score_result = score_candidate(
+                anthropic_api_key, candidate_text, role_key, example_cvs
+            )
+
+            candidate.score = score_result.get("score", 0)
+            candidate.score_reasoning = score_result.get("reasoning", "")
+            candidate.target_role = profile["title"]
+            candidate.scored_at = datetime.now(timezone.utc)
+            candidate.source_list = "linkedin_search"
+
+            scored_count += 1
+            total_score += candidate.score
+
+            # 3. Generate outreach for top candidates
+            if candidate.score >= outreach_min_score:
+                try:
+                    message = generate_outreach(
+                        api_key=anthropic_api_key,
+                        candidate_name=candidate.full_name,
+                        candidate_info=candidate_text,
+                        role_title=profile["title"],
+                        score_reasoning=candidate.score_reasoning,
+                        outreach_angle=score_result.get("outreach_angle", ""),
+                    )
+                    candidate.outreach_message = message
+                    candidate.outreach_generated_at = datetime.now(timezone.utc)
+                except Exception:
+                    logger.exception(
+                        "Failed to generate outreach for %s", candidate.full_name
+                    )
+
+            db.session.commit()
+
+        # Update run
+        run.candidates_scored = scored_count
+        run.avg_score = total_score / scored_count if scored_count > 0 else 0
+        run.completed_at = datetime.now(timezone.utc)
+        run.status = "completed"
+        db.session.commit()
+
+        logger.info(
+            "LinkedIn search pipeline complete: %d candidates, avg score %.1f",
+            scored_count,
+            run.avg_score,
+        )
+
+    except Exception as e:
+        run.status = "failed"
+        run.error_message = str(e)
+        run.completed_at = datetime.now(timezone.utc)
+        db.session.commit()
+        logger.exception("LinkedIn search pipeline failed")
         raise
 
     return run

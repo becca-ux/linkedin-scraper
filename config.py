@@ -10,5 +10,6 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     AMPLEMARKET_API_KEY = os.environ.get("AMPLEMARKET_API_KEY")
     ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
+    PROXYCURL_API_KEY = os.environ.get("PROXYCURL_API_KEY")
     SCORING_SCHEDULE = os.environ.get("SCORING_SCHEDULE", "daily")
     API_KEY = os.environ.get("API_KEY")  # Protects /api/* endpoints

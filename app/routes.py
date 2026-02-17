@@ -7,7 +7,7 @@ from flask import Blueprint, current_app, jsonify, render_template, request
 
 from app import db
 from app.models import Candidate, ScoringRun
-from app.pipeline import run_scoring_pipeline
+from app.pipeline import run_scoring_pipeline, run_linkedin_search_pipeline
 from app.scheduler import schedule_scoring_run, _scheduled_jobs
 from app.scoring.profiles import ROLE_PROFILES
 
@@ -80,6 +80,7 @@ def index():
         recent_runs=recent_runs,
         current_role=role_filter,
         current_min_score=min_score,
+        role_keys=ROLE_PROFILES,
     )
 
 
@@ -135,6 +136,97 @@ def trigger_run():
         )
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@main_bp.route("/api/search", methods=["POST"])
+@require_api_key
+def linkedin_search():
+    """Search LinkedIn for candidates, score, and store them."""
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Request body must be JSON"}), 400
+
+    role_key = data.get("role_key")
+    role_title_search = data.get("role_title")
+
+    if not role_key or not role_title_search:
+        return jsonify({"error": "role_key and role_title are required"}), 400
+
+    if role_key not in ROLE_PROFILES:
+        return jsonify(
+            {"error": f"Invalid role_key. Valid: {list(ROLE_PROFILES.keys())}"}
+        ), 400
+
+    config = current_app.config
+    if not config.get("PROXYCURL_API_KEY"):
+        return jsonify({"error": "PROXYCURL_API_KEY not configured"}), 500
+
+    try:
+        run = run_linkedin_search_pipeline(
+            proxycurl_api_key=config["PROXYCURL_API_KEY"],
+            anthropic_api_key=config["ANTHROPIC_API_KEY"],
+            role_key=role_key,
+            role_title_search=role_title_search,
+            country=data.get("country", "GB"),
+            city=data.get("city", "London"),
+            keyword=data.get("keyword"),
+            past_role_title=data.get("past_role_title"),
+            current_company_name=data.get("current_company"),
+            page_size=min(data.get("page_size", 10), 25),
+        )
+        return jsonify(
+            {
+                "status": "completed",
+                "run_id": run.id,
+                "candidates_scored": run.candidates_scored,
+                "avg_score": run.avg_score,
+            }
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@main_bp.route("/search", methods=["GET", "POST"])
+def search_page():
+    """LinkedIn search form and results."""
+    result = None
+    error = None
+
+    if request.method == "POST":
+        role_key = request.form.get("role_key")
+        role_title = request.form.get("role_title", "").strip()
+        city = request.form.get("city", "London").strip()
+        country = request.form.get("country", "GB").strip()
+        keyword = request.form.get("keyword", "").strip() or None
+        page_size = int(request.form.get("page_size", 10))
+
+        config = current_app.config
+        if not config.get("PROXYCURL_API_KEY"):
+            error = "PROXYCURL_API_KEY not configured. Add it in your environment variables."
+        elif not role_key or not role_title:
+            error = "Role and job title search are required."
+        else:
+            try:
+                run = run_linkedin_search_pipeline(
+                    proxycurl_api_key=config["PROXYCURL_API_KEY"],
+                    anthropic_api_key=config["ANTHROPIC_API_KEY"],
+                    role_key=role_key,
+                    role_title_search=role_title,
+                    country=country,
+                    city=city,
+                    keyword=keyword,
+                    page_size=min(page_size, 25),
+                )
+                result = run
+            except Exception as e:
+                error = str(e)
+
+    return render_template(
+        "search.html",
+        role_keys=ROLE_PROFILES,
+        result=result,
+        error=error,
+    )
 
 
 @main_bp.route("/api/schedule", methods=["POST"])

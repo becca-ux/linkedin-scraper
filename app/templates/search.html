@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}LinkedIn Search{% endblock %}
+{% block content %}
+
+<h2 style="margin-bottom: 20px;">LinkedIn Candidate Search</h2>
+
+{% if error %}
+<div style="background: #f8d7da; color: #721c24; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px;">
+    {{ error }}
+</div>
+{% endif %}
+
+{% if result %}
+<div style="background: #d4edda; color: #155724; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px;">
+    Found and scored <strong>{{ result.candidates_scored }}</strong> candidates (avg score: {{ "%.1f"|format(result.avg_score or 0) }}).
+    <a href="/">View on dashboard</a>
+</div>
+{% endif %}
+
+<div class="card">
+    <form method="POST" action="/search">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+            <div>
+                <label style="display:block; font-size:13px; color:#86868b; margin-bottom:4px;">Hiring for role</label>
+                <select name="role_key" style="width:100%; padding:8px 12px; border:1px solid #d2d2d7; border-radius:8px; font-size:14px;">
+                    {% for key, profile in role_keys.items() %}
+                    <option value="{{ key }}">{{ profile.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label style="display:block; font-size:13px; color:#86868b; margin-bottom:4px;">LinkedIn job title to search</label>
+                <input type="text" name="role_title" placeholder="e.g. Account Executive" required
+                       style="width:100%; padding:8px 12px; border:1px solid #d2d2d7; border-radius:8px; font-size:14px;">
+            </div>
+            <div>
+                <label style="display:block; font-size:13px; color:#86868b; margin-bottom:4px;">City</label>
+                <input type="text" name="city" value="London" style="width:100%; padding:8px 12px; border:1px solid #d2d2d7; border-radius:8px; font-size:14px;">
+            </div>
+            <div>
+                <label style="display:block; font-size:13px; color:#86868b; margin-bottom:4px;">Country code</label>
+                <input type="text" name="country" value="GB" style="width:100%; padding:8px 12px; border:1px solid #d2d2d7; border-radius:8px; font-size:14px;">
+            </div>
+            <div>
+                <label style="display:block; font-size:13px; color:#86868b; margin-bottom:4px;">Keyword (optional)</label>
+                <input type="text" name="keyword" placeholder="e.g. SaaS, startup, Series A"
+                       style="width:100%; padding:8px 12px; border:1px solid #d2d2d7; border-radius:8px; font-size:14px;">
+            </div>
+            <div>
+                <label style="display:block; font-size:13px; color:#86868b; margin-bottom:4px;">Results (max 25)</label>
+                <input type="number" name="page_size" value="10" min="1" max="25"
+                       style="width:100%; padding:8px 12px; border:1px solid #d2d2d7; border-radius:8px; font-size:14px;">
+            </div>
+        </div>
+        <button type="submit" style="padding:10px 24px; background:#0071e3; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600;">
+            Search LinkedIn
+        </button>
+    </form>
+</div>
+
+<div class="card" style="margin-top: 20px;">
+    <h3 style="margin-bottom: 8px;">Search tips</h3>
+    <ul style="font-size: 14px; color: #86868b; padding-left: 20px;">
+        <li><strong>AE search:</strong> Try "Account Executive" or "Enterprise Account Executive" with keyword "SaaS"</li>
+        <li><strong>CSM search:</strong> Try "Customer Success Manager" or "Senior CSM" with keyword "SaaS"</li>
+        <li>Candidates are automatically scored against your ideal profiles and outreach is generated for top scorers (7+)</li>
+    </ul>
+</div>
+
+{% endblock %}
