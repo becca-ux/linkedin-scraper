@@ -90,7 +90,7 @@ def schedule_auto_sourcing(
     job_id = f"auto_source_{role_key}"
 
     if schedule == "once":
-        scheduler.add_job(job, id=job_id, replace_existing=True)
+        scheduler.add_job(job, "date", id=job_id, replace_existing=True)
     elif schedule == "weekly":
         scheduler.add_job(
             job, "cron", day_of_week="mon", hour=8, id=job_id, replace_existing=True
