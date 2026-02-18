@@ -63,13 +63,71 @@ class TestGenerateSearchQueries:
             assert "Fallback" in queries[0]["rationale"]
 
 
+class TestSerperClient:
+    def test_parse_linkedin_result(self):
+        from app.api.serper import _parse_linkedin_result
+
+        result = {
+            "title": "Jane Doe - Account Executive - StartupCo | LinkedIn",
+            "link": "https://uk.linkedin.com/in/janedoe",
+            "snippet": "Experienced AE with 5 years in B2B SaaS...",
+        }
+        parsed = _parse_linkedin_result(result)
+        assert parsed is not None
+        assert parsed["full_name"] == "Jane Doe"
+        assert parsed["current_title"] == "Account Executive"
+        assert parsed["current_company"] == "StartupCo"
+        assert parsed["slug"] == "janedoe"
+        assert parsed["linkedin_url"] == "https://uk.linkedin.com/in/janedoe"
+
+    def test_parse_title_with_at(self):
+        from app.api.serper import _parse_linkedin_result
+
+        result = {
+            "title": "Sam Champion - Senior AE at Hook | LinkedIn",
+            "link": "https://linkedin.com/in/samchampion",
+            "snippet": "Founding AE...",
+        }
+        parsed = _parse_linkedin_result(result)
+        assert parsed["full_name"] == "Sam Champion"
+        assert parsed["current_title"] == "Senior AE"
+        assert parsed["current_company"] == "Hook"
+
+    def test_parse_skips_non_linkedin(self):
+        from app.api.serper import _parse_linkedin_result
+
+        result = {
+            "title": "Some Page",
+            "link": "https://example.com/page",
+            "snippet": "Not LinkedIn",
+        }
+        assert _parse_linkedin_result(result) is None
+
+    def test_normalize_serper_candidate(self):
+        from app.api.serper import normalize_serper_candidate
+
+        candidate = {
+            "linkedin_url": "https://linkedin.com/in/janedoe",
+            "slug": "janedoe",
+            "full_name": "Jane Doe",
+            "current_title": "AE",
+            "current_company": "StartupCo",
+            "snippet": "Experienced AE in B2B SaaS",
+        }
+        normalized = normalize_serper_candidate(candidate)
+        assert normalized["amplemarket_id"] == "li_janedoe"
+        assert normalized["full_name"] == "Jane Doe"
+        assert normalized["linkedin_url"] == "https://linkedin.com/in/janedoe"
+        assert normalized["raw_data"]["source"] == "serper_google"
+
+
 class TestAutoSourcingPipeline:
     @patch("app.pipeline.generate_outreach")
     @patch("app.pipeline.score_candidate")
-    @patch("app.pipeline.LinkedInClient")
+    @patch("app.pipeline.SerperClient")
     @patch("app.pipeline.generate_search_queries")
     def test_full_auto_sourcing(
-        self, mock_gen_queries, MockLIClient, mock_score, mock_outreach, app, db
+        self, mock_gen_queries, MockSerper, mock_score, mock_outreach, app, db
     ):
         # Setup query generation
         mock_gen_queries.return_value = [
@@ -82,21 +140,17 @@ class TestAutoSourcingPipeline:
             }
         ]
 
-        # Setup LinkedIn search
-        mock_li = MagicMock()
-        MockLIClient.return_value = mock_li
-        mock_li.search_people.return_value = [
+        # Setup Serper search
+        mock_serper = MagicMock()
+        MockSerper.return_value = mock_serper
+        mock_serper.search_linkedin_profiles.return_value = [
             {
-                "linkedin_profile_url": "https://linkedin.com/in/janedoe",
-                "profile": {
-                    "full_name": "Jane Doe",
-                    "headline": "AE at StartupCo",
-                    "experiences": [
-                        {"title": "AE", "company": "StartupCo", "description": "Full cycle"}
-                    ],
-                    "education": [],
-                    "skills": ["SaaS", "B2B"],
-                },
+                "linkedin_url": "https://linkedin.com/in/janedoe",
+                "slug": "janedoe",
+                "full_name": "Jane Doe",
+                "current_title": "AE",
+                "current_company": "StartupCo",
+                "snippet": "Full cycle AE at StartupCo",
             }
         ]
 
@@ -113,7 +167,7 @@ class TestAutoSourcingPipeline:
 
         with app.app_context():
             run = run_auto_sourcing_pipeline(
-                proxycurl_api_key="fake",
+                serper_api_key="fake",
                 anthropic_api_key="fake",
                 role_key="ae",
             )
@@ -129,10 +183,10 @@ class TestAutoSourcingPipeline:
             assert candidate.outreach_message is not None
 
     @patch("app.pipeline.score_candidate")
-    @patch("app.pipeline.LinkedInClient")
+    @patch("app.pipeline.SerperClient")
     @patch("app.pipeline.generate_search_queries")
     def test_deduplicates_across_queries(
-        self, mock_gen_queries, MockLIClient, mock_score, app, db
+        self, mock_gen_queries, MockSerper, mock_score, app, db
     ):
         mock_gen_queries.return_value = [
             {"role_title": "AE", "keyword": None, "past_role_title": None,
@@ -141,20 +195,18 @@ class TestAutoSourcingPipeline:
              "current_company_name": None, "rationale": "Query 2"},
         ]
 
-        mock_li = MagicMock()
-        MockLIClient.return_value = mock_li
+        mock_serper = MagicMock()
+        MockSerper.return_value = mock_serper
 
         # Both queries return the same person
-        mock_li.search_people.return_value = [
+        mock_serper.search_linkedin_profiles.return_value = [
             {
-                "linkedin_profile_url": "https://linkedin.com/in/janedoe",
-                "profile": {
-                    "full_name": "Jane Doe",
-                    "headline": "AE",
-                    "experiences": [{"title": "AE", "company": "Co"}],
-                    "education": [],
-                    "skills": [],
-                },
+                "linkedin_url": "https://linkedin.com/in/janedoe",
+                "slug": "janedoe",
+                "full_name": "Jane Doe",
+                "current_title": "AE",
+                "current_company": "Co",
+                "snippet": "AE at Co",
             }
         ]
 
@@ -167,7 +219,7 @@ class TestAutoSourcingPipeline:
 
         with app.app_context():
             run = run_auto_sourcing_pipeline(
-                proxycurl_api_key="fake",
+                serper_api_key="fake",
                 anthropic_api_key="fake",
                 role_key="ae",
             )
@@ -184,7 +236,7 @@ class TestAutoSourcingPipeline:
         with app.app_context():
             try:
                 run_auto_sourcing_pipeline(
-                    proxycurl_api_key="fake",
+                    serper_api_key="fake",
                     anthropic_api_key="fake",
                     role_key="ae",
                 )
@@ -195,25 +247,25 @@ class TestAutoSourcingPipeline:
             run = ScoringRun.query.first()
             assert run.status == "failed"
 
-    @patch("app.pipeline.LinkedInClient")
+    @patch("app.pipeline.SerperClient")
     @patch("app.pipeline.generate_search_queries")
     def test_skips_failed_search_queries(
-        self, mock_gen_queries, MockLIClient, app, db
+        self, mock_gen_queries, MockSerper, app, db
     ):
         mock_gen_queries.return_value = [
             {"role_title": "AE", "keyword": None, "past_role_title": None,
              "current_company_name": None, "rationale": "Will fail"},
         ]
 
-        mock_li = MagicMock()
-        MockLIClient.return_value = mock_li
-        mock_li.search_people.side_effect = Exception("Rate limited")
+        mock_serper = MagicMock()
+        MockSerper.return_value = mock_serper
+        mock_serper.search_linkedin_profiles.side_effect = Exception("Rate limited")
 
         from app.pipeline import run_auto_sourcing_pipeline
 
         with app.app_context():
             run = run_auto_sourcing_pipeline(
-                proxycurl_api_key="fake",
+                serper_api_key="fake",
                 anthropic_api_key="fake",
                 role_key="ae",
             )

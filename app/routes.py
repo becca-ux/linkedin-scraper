@@ -306,8 +306,8 @@ def auto_source_page():
 
         if not config.get("ANTHROPIC_API_KEY"):
             error = "ANTHROPIC_API_KEY not configured."
-        elif not config.get("PROXYCURL_API_KEY"):
-            error = "PROXYCURL_API_KEY not configured."
+        elif not config.get("SERPER_API_KEY"):
+            error = "SERPER_API_KEY not configured. Sign up at serper.dev to get a free API key."
         elif not role_key or role_key not in ROLE_PROFILES:
             error = "Please select a valid role."
         elif action == "preview":
@@ -322,12 +322,11 @@ def auto_source_page():
             # Full auto-sourcing run
             try:
                 run = run_auto_sourcing_pipeline(
-                    proxycurl_api_key=config["PROXYCURL_API_KEY"],
+                    serper_api_key=config["SERPER_API_KEY"],
                     anthropic_api_key=config["ANTHROPIC_API_KEY"],
                     role_key=role_key,
-                    country=country,
                     city=city,
-                    page_size=min(page_size, 25),
+                    num_results=min(page_size, 25),
                 )
                 result = {
                     "run_id": run.id,
@@ -362,19 +361,18 @@ def api_auto_source():
         ), 400
 
     config = current_app.config
-    if not config.get("PROXYCURL_API_KEY"):
-        return jsonify({"error": "PROXYCURL_API_KEY not configured"}), 500
+    if not config.get("SERPER_API_KEY"):
+        return jsonify({"error": "SERPER_API_KEY not configured"}), 500
     if not config.get("ANTHROPIC_API_KEY"):
         return jsonify({"error": "ANTHROPIC_API_KEY not configured"}), 500
 
     try:
         run = run_auto_sourcing_pipeline(
-            proxycurl_api_key=config["PROXYCURL_API_KEY"],
+            serper_api_key=config["SERPER_API_KEY"],
             anthropic_api_key=config["ANTHROPIC_API_KEY"],
             role_key=role_key,
-            country=data.get("country", "GB"),
             city=data.get("city", "London"),
-            page_size=min(data.get("page_size", 10), 25),
+            num_results=min(data.get("num_results", 10), 25),
             outreach_min_score=data.get("outreach_min_score", 7.0),
         )
         return jsonify(

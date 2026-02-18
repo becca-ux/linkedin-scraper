@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from app import db
 from app.api.amplemarket import AmplemarketClient, normalize_candidate
 from app.api.linkedin import LinkedInClient, normalize_linkedin_candidate
+from app.api.serper import SerperClient, normalize_serper_candidate
 from app.models import Candidate, ScoringRun
 from app.outreach.generator import generate_outreach
 from app.scoring.profiles import get_example_cvs
@@ -269,18 +270,17 @@ def run_linkedin_search_pipeline(
 
 
 def run_auto_sourcing_pipeline(
-    proxycurl_api_key: str,
+    serper_api_key: str,
     anthropic_api_key: str,
     role_key: str,
-    country: str = "GB",
     city: str = "London",
-    page_size: int = 10,
+    num_results: int = 10,
     outreach_min_score: float = 7.0,
 ) -> ScoringRun:
     """Fully automated sourcing: analyze CVs -> generate queries -> search -> score -> outreach.
 
     1. Use Claude to analyze exemplar CVs and generate LinkedIn search queries
-    2. Run each query via Proxycurl
+    2. Run each query via Serper.dev (Google search for LinkedIn profiles)
     3. Deduplicate across queries
     4. Score every candidate with Claude
     5. Generate outreach for top scorers
@@ -303,8 +303,8 @@ def run_auto_sourcing_pipeline(
             "Auto-sourcing: generated %d queries for %s", len(queries), role_key
         )
 
-        # 2. Run each query and collect unique candidates
-        li_client = LinkedInClient(proxycurl_api_key)
+        # 2. Run each query via Serper and collect unique candidates
+        serper_client = SerperClient(serper_api_key)
         seen_urls = set()
         all_candidates = []
 
@@ -323,14 +323,13 @@ def run_auto_sourcing_pipeline(
             )
 
             try:
-                results = li_client.search_people(
+                results = serper_client.search_linkedin_profiles(
                     role_title=role_title,
-                    country=country,
                     city=city,
                     keyword=keyword,
                     past_role_title=past_role_title,
                     current_company_name=current_company_name,
-                    page_size=page_size,
+                    num_results=num_results,
                 )
             except Exception:
                 logger.exception(
@@ -339,22 +338,12 @@ def run_auto_sourcing_pipeline(
                 continue
 
             for result in results:
-                linkedin_url = result.get("linkedin_profile_url", "")
+                linkedin_url = result.get("linkedin_url", "")
                 if not linkedin_url or linkedin_url in seen_urls:
                     continue
                 seen_urls.add(linkedin_url)
 
-                profile_data = result.get("profile") or {}
-                if not profile_data or not profile_data.get("full_name"):
-                    try:
-                        profile_data = li_client.get_profile(linkedin_url)
-                    except Exception:
-                        logger.warning(
-                            "Failed to enrich %s, skipping", linkedin_url
-                        )
-                        continue
-
-                normalized = normalize_linkedin_candidate(profile_data, linkedin_url)
+                normalized = normalize_serper_candidate(result)
                 all_candidates.append(normalized)
 
         logger.info(

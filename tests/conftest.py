@@ -13,6 +13,7 @@ class TestConfig:
     AMPLEMARKET_API_KEY = "test-amplemarket-key"
     ANTHROPIC_API_KEY = "test-anthropic-key"
     PROXYCURL_API_KEY = "test-proxycurl-key"
+    SERPER_API_KEY = "test-serper-key"
     API_KEY = "test-api-key"
 
 

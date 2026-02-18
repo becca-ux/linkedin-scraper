@@ -60,9 +60,8 @@ def schedule_auto_sourcing(
     app,
     role_key: str,
     schedule: str = "daily",
-    country: str = "GB",
     city: str = "London",
-    page_size: int = 10,
+    num_results: int = 10,
 ):
     """Schedule a recurring auto-sourcing run.
 
@@ -70,9 +69,8 @@ def schedule_auto_sourcing(
         app: Flask app instance.
         role_key: Role to source for.
         schedule: "daily" or "weekly".
-        country: Country code for LinkedIn search.
         city: City for LinkedIn search.
-        page_size: Results per query.
+        num_results: Results per query.
     """
     from app.pipeline import run_auto_sourcing_pipeline
 
@@ -80,12 +78,11 @@ def schedule_auto_sourcing(
         with app.app_context():
             try:
                 run_auto_sourcing_pipeline(
-                    proxycurl_api_key=app.config["PROXYCURL_API_KEY"],
+                    serper_api_key=app.config["SERPER_API_KEY"],
                     anthropic_api_key=app.config["ANTHROPIC_API_KEY"],
                     role_key=role_key,
-                    country=country,
                     city=city,
-                    page_size=page_size,
+                    num_results=num_results,
                 )
             except Exception:
                 logger.exception("Scheduled auto-sourcing run failed")
