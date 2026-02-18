@@ -209,8 +209,7 @@ def search_page():
         linkedin_url = request.form.get("linkedin_url", "").strip() or None
 
         config = current_app.config
-        anthropic_key = config.get("ANTHROPIC_API_KEY") or ""
-        if not anthropic_key or anthropic_key.startswith("your_"):
+        if not _api_key_ok(config, "ANTHROPIC_API_KEY"):
             error = "ANTHROPIC_API_KEY not configured. Set a real API key in your environment variables."
         elif not role_key or not candidate_name or not candidate_text:
             error = "Role, candidate name, and profile text are all required."
@@ -289,6 +288,12 @@ def search_page():
     )
 
 
+def _api_key_ok(config, name):
+    """Return True if the given config key holds a real (non-placeholder) value."""
+    val = config.get(name) or ""
+    return bool(val and not val.startswith("your_"))
+
+
 @main_bp.route("/auto-source", methods=["GET", "POST"])
 def auto_source_page():
     """One-click automated candidate sourcing from exemplar CVs."""
@@ -305,13 +310,9 @@ def auto_source_page():
 
         config = current_app.config
 
-        def _key_ok(name):
-            val = config.get(name) or ""
-            return val and not val.startswith("your_")
-
-        if not _key_ok("ANTHROPIC_API_KEY"):
+        if not _api_key_ok(config, "ANTHROPIC_API_KEY"):
             error = "ANTHROPIC_API_KEY not configured. Set a real API key in your environment variables."
-        elif not _key_ok("SERPER_API_KEY"):
+        elif not _api_key_ok(config, "SERPER_API_KEY"):
             error = "SERPER_API_KEY not configured. Sign up at serper.dev to get a free API key, then set it in your environment variables."
         elif not role_key or role_key not in ROLE_PROFILES:
             error = "Please select a valid role."
@@ -336,16 +337,24 @@ def auto_source_page():
                 )
                 result = {
                     "status": run.status,
+                    "candidates_scored": run.candidates_scored or 0,
+                    "avg_score": run.avg_score or 0,
                     "message": (
                         f"Auto-sourcing complete for {ROLE_PROFILES[role_key]['title']}: "
                         f"{run.candidates_scored} candidates scored"
                         f" (avg {run.avg_score:.1f})."
                         if run.candidates_scored
-                        else f"Auto-sourcing ran but found 0 candidates. Try a different role or city."
+                        else "Auto-sourcing ran but found 0 candidates. Try a different role or city."
                     ),
                 }
             except Exception as e:
                 error = f"Auto-sourcing failed: {e}"
+
+    config = current_app.config
+    setup_status = {
+        "anthropic": _api_key_ok(config, "ANTHROPIC_API_KEY"),
+        "serper": _api_key_ok(config, "SERPER_API_KEY"),
+    }
 
     return render_template(
         "auto_source.html",
@@ -353,6 +362,7 @@ def auto_source_page():
         result=result,
         error=error,
         queries=queries,
+        setup_status=setup_status,
     )
 
 
@@ -371,11 +381,9 @@ def api_auto_source():
         ), 400
 
     config = current_app.config
-    serper_key = config.get("SERPER_API_KEY") or ""
-    anthropic_key = config.get("ANTHROPIC_API_KEY") or ""
-    if not serper_key or serper_key.startswith("your_"):
+    if not _api_key_ok(config, "SERPER_API_KEY"):
         return jsonify({"error": "SERPER_API_KEY not configured"}), 500
-    if not anthropic_key or anthropic_key.startswith("your_"):
+    if not _api_key_ok(config, "ANTHROPIC_API_KEY"):
         return jsonify({"error": "ANTHROPIC_API_KEY not configured"}), 500
 
     try:

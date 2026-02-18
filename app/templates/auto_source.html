@@ -5,6 +5,27 @@
 <h2 style="margin-bottom: 8px;">Auto Source Candidates</h2>
 <p style="color:#86868b; margin-bottom:20px;">Claude analyses your ideal candidate CVs, generates LinkedIn search queries, finds similar people, scores them, and writes outreach — all automatically.</p>
 
+{% if not setup_status.anthropic or not setup_status.serper %}
+<div class="card" style="margin-bottom: 20px; border-left: 4px solid #ffc107;">
+    <h2 style="margin-bottom:12px;">Setup Required</h2>
+    <p style="color:#86868b; margin-bottom:12px;">Auto Source needs two API keys to work. Set them as environment variables (or in a <code>.env</code> file in the project root):</p>
+    <table>
+        <tbody>
+            <tr>
+                <td style="font-weight:600;">ANTHROPIC_API_KEY</td>
+                <td>{% if setup_status.anthropic %}<span style="color:#28a745;">Configured</span>{% else %}<span style="color:#dc3545;">Missing</span>{% endif %}</td>
+                <td style="color:#86868b; font-size:13px;">Get from <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a></td>
+            </tr>
+            <tr>
+                <td style="font-weight:600;">SERPER_API_KEY</td>
+                <td>{% if setup_status.serper %}<span style="color:#28a745;">Configured</span>{% else %}<span style="color:#dc3545;">Missing</span>{% endif %}</td>
+                <td style="color:#86868b; font-size:13px;">Get from <a href="https://serper.dev" target="_blank">serper.dev</a> (free tier: 2,500 searches)</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
 {% if error %}
 <div style="background: #f8d7da; color: #721c24; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px;">
     {{ error }}
@@ -12,11 +33,9 @@
 {% endif %}
 
 {% if result %}
-<div class="card" style="margin-bottom: 20px; border-left: 4px solid {% if result.status == 'scheduled' %}#ffc107{% else %}#28a745{% endif %};">
-    <h2 style="margin-bottom:12px;">{% if result.status == 'scheduled' %}Sourcing Started{% else %}Sourcing Complete{% endif %}</h2>
-    {% if result.status == 'scheduled' %}
-    <p style="color:#86868b; margin-bottom:12px;">{{ result.message }}</p>
-    {% else %}
+<div class="card" style="margin-bottom: 20px; border-left: 4px solid {% if result.status == 'completed' %}#28a745{% else %}#ffc107{% endif %};">
+    <h2 style="margin-bottom:12px;">{% if result.status == 'completed' %}Sourcing Complete{% else %}{{ result.status|title }}{% endif %}</h2>
+    {% if result.candidates_scored %}
     <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:16px;">
         <div>
             <div style="font-size:13px; color:#86868b; text-transform:uppercase; letter-spacing:0.5px;">Candidates Found</div>
@@ -31,6 +50,8 @@
             <div style="font-size:28px; font-weight:700; margin-top:4px; color:#28a745;">{{ result.status }}</div>
         </div>
     </div>
+    {% else %}
+    <p style="color:#86868b;">{{ result.message }}</p>
     {% endif %}
     <p style="margin-top:16px; font-size:14px;">
         <a href="/?min_score=6">View scored candidates on dashboard</a>
@@ -94,10 +115,12 @@
             <input type="text" name="city" value="London" style="width:300px; padding:8px 12px; border:1px solid #d2d2d7; border-radius:8px; font-size:14px;">
         </div>
         <div style="display:flex; gap:12px;">
-            <button type="submit" name="action" value="preview" style="padding:10px 24px; background:#fff; color:#0071e3; border:1px solid #0071e3; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600;">
+            <button type="submit" name="action" value="preview" style="padding:10px 24px; background:#fff; color:#0071e3; border:1px solid #0071e3; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600;"
+                {% if not setup_status.anthropic %}disabled title="ANTHROPIC_API_KEY required"{% endif %}>
                 Preview Queries
             </button>
-            <button type="submit" name="action" value="run" style="padding:10px 24px; background:#0071e3; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600;">
+            <button type="submit" name="action" value="run" style="padding:10px 24px; background:#0071e3; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600;"
+                {% if not setup_status.anthropic or not setup_status.serper %}disabled title="API keys required — see setup above"{% endif %}>
                 Find Candidates
             </button>
         </div>
