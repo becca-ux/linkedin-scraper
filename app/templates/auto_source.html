@@ -12,8 +12,11 @@
 {% endif %}
 
 {% if result %}
-<div class="card" style="margin-bottom: 20px; border-left: 4px solid #28a745;">
-    <h2 style="margin-bottom:12px;">Sourcing Complete</h2>
+<div class="card" style="margin-bottom: 20px; border-left: 4px solid {% if result.status == 'scheduled' %}#ffc107{% else %}#28a745{% endif %};">
+    <h2 style="margin-bottom:12px;">{% if result.status == 'scheduled' %}Sourcing Started{% else %}Sourcing Complete{% endif %}</h2>
+    {% if result.status == 'scheduled' %}
+    <p style="color:#86868b; margin-bottom:12px;">{{ result.message }}</p>
+    {% else %}
     <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:16px;">
         <div>
             <div style="font-size:13px; color:#86868b; text-transform:uppercase; letter-spacing:0.5px;">Candidates Found</div>
@@ -28,6 +31,7 @@
             <div style="font-size:28px; font-weight:700; margin-top:4px; color:#28a745;">{{ result.status }}</div>
         </div>
     </div>
+    {% endif %}
     <p style="margin-top:16px; font-size:14px;">
         <a href="/?min_score=6">View scored candidates on dashboard</a>
     </p>

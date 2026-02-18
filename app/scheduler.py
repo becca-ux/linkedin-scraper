@@ -68,7 +68,7 @@ def schedule_auto_sourcing(
     Args:
         app: Flask app instance.
         role_key: Role to source for.
-        schedule: "daily" or "weekly".
+        schedule: "daily", "weekly", or "once" for immediate execution.
         city: City for LinkedIn search.
         num_results: Results per query.
     """
@@ -89,7 +89,9 @@ def schedule_auto_sourcing(
 
     job_id = f"auto_source_{role_key}"
 
-    if schedule == "weekly":
+    if schedule == "once":
+        scheduler.add_job(job, id=job_id, replace_existing=True)
+    elif schedule == "weekly":
         scheduler.add_job(
             job, "cron", day_of_week="mon", hour=8, id=job_id, replace_existing=True
         )

@@ -291,6 +291,8 @@ def search_page():
 @main_bp.route("/auto-source", methods=["GET", "POST"])
 def auto_source_page():
     """One-click automated candidate sourcing from exemplar CVs."""
+    from app.scheduler import schedule_auto_sourcing
+
     result = None
     error = None
     queries = None
@@ -319,20 +321,18 @@ def auto_source_page():
             except Exception as e:
                 error = f"Failed to generate queries: {e}"
         else:
-            # Full auto-sourcing run
+            # Schedule as background job to avoid timeout
             try:
-                run = run_auto_sourcing_pipeline(
-                    serper_api_key=config["SERPER_API_KEY"],
-                    anthropic_api_key=config["ANTHROPIC_API_KEY"],
+                schedule_auto_sourcing(
+                    app=current_app._get_current_object(),
                     role_key=role_key,
                     city=city,
                     num_results=min(page_size, 25),
+                    schedule="once",
                 )
                 result = {
-                    "run_id": run.id,
-                    "candidates_scored": run.candidates_scored,
-                    "avg_score": run.avg_score,
-                    "status": run.status,
+                    "status": "scheduled",
+                    "message": f"Auto-sourcing started for {ROLE_PROFILES[role_key]['title']}. Check the dashboard for results.",
                 }
             except Exception as e:
                 error = str(e)
