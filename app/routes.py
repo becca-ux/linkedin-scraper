@@ -2,8 +2,12 @@
 
 import functools
 import hmac
+import logging
+import threading
 
-from flask import Blueprint, current_app, jsonify, render_template, request
+from flask import Blueprint, current_app, jsonify, redirect, render_template, request, url_for
+
+logger = logging.getLogger(__name__)
 
 from app import db
 from app.models import Candidate, ScoringRun
@@ -325,30 +329,30 @@ def auto_source_page():
             except Exception as e:
                 error = f"Failed to generate queries: {e}"
         else:
-            # Run pipeline synchronously so errors are visible and results
-            # are ready before the page renders.
-            try:
-                run = run_auto_sourcing_pipeline(
-                    serper_api_key=config["SERPER_API_KEY"],
-                    anthropic_api_key=config["ANTHROPIC_API_KEY"],
-                    role_key=role_key,
-                    city=city,
-                    num_results=min(page_size, 25),
-                )
-                result = {
-                    "status": run.status,
-                    "candidates_scored": run.candidates_scored or 0,
-                    "avg_score": run.avg_score or 0,
-                    "message": (
-                        f"Auto-sourcing complete for {ROLE_PROFILES[role_key]['title']}: "
-                        f"{run.candidates_scored} candidates scored"
-                        f" (avg {run.avg_score:.1f})."
-                        if run.candidates_scored
-                        else "Auto-sourcing ran but found 0 candidates. Try a different role or city."
-                    ),
-                }
-            except Exception as e:
-                error = f"Auto-sourcing failed: {e}"
+            # Run pipeline in a background thread so the request returns
+            # instantly (Render kills long requests with 502).
+            app = current_app._get_current_object()
+            serper_key = config["SERPER_API_KEY"]
+            anthropic_key = config["ANTHROPIC_API_KEY"]
+            num_results = min(page_size, 25)
+
+            def _run():
+                with app.app_context():
+                    try:
+                        run_auto_sourcing_pipeline(
+                            serper_api_key=serper_key,
+                            anthropic_api_key=anthropic_key,
+                            role_key=role_key,
+                            city=city,
+                            num_results=num_results,
+                        )
+                    except Exception:
+                        logger.exception("Auto-sourcing pipeline failed")
+
+            threading.Thread(target=_run, daemon=True).start()
+
+            # Redirect to dashboard where the run will appear
+            return redirect(url_for("main.index"))
 
     config = current_app.config
     setup_status = {

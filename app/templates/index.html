@@ -2,6 +2,15 @@
 {% block title %}Dashboard{% endblock %}
 {% block content %}
 
+{% set running_runs = recent_runs | selectattr('status', 'equalto', 'running') | list %}
+{% if running_runs %}
+<div class="card" style="margin-bottom:20px; border-left:4px solid #ffc107; background:#fff8e1;">
+    <p style="margin:0; font-weight:600;">Auto-sourcing is running... this page will refresh automatically.</p>
+    <p style="margin:4px 0 0; color:#86868b; font-size:13px;">Candidates will appear below as they are scored. Started {{ running_runs[0].started_at.strftime('%H:%M') if running_runs[0].started_at else 'just now' }}.</p>
+</div>
+<script>setTimeout(function(){ window.location.reload(); }, 10000);</script>
+{% endif %}
+
 <form class="filters" method="GET" action="/">
     <select name="role">
         <option value="">All Roles</option>
