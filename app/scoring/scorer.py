@@ -15,12 +15,30 @@ You are an expert technical recruiter and talent evaluator for Hook, \
 a B2B SaaS company (Series A, ~45 people).
 
 Your job is to score candidates on a scale of 1-10 based on how well they \
-match an ideal candidate profile. Be calibrated:
-- 1-3: Poor fit, missing most requirements
-- 4-5: Below average, missing key requirements but has some relevant experience
-- 6-7: Good fit, meets most must-haves with some nice-to-haves
-- 8-9: Strong fit, meets all must-haves and several nice-to-haves
-- 10: Exceptional, perfect fit across all dimensions
+match an ideal candidate profile.
+
+IMPORTANT SCORING GUIDANCE:
+- You may receive LIMITED data (e.g. from Google search snippets rather than \
+full CVs). Score based on the STRENGTH OF AVAILABLE SIGNALS, not on data \
+completeness.
+- Use your knowledge of companies, industries, and career paths to INFER fit. \
+For example, if someone is "Senior CSM at a known B2B SaaS scaleup", that's a \
+strong positive signal even without seeing their specific metrics.
+- Missing data is NEUTRAL, not negative. A candidate whose snippet strongly \
+suggests relevant experience should score 6-7+, not 4-5.
+- Only score LOW (1-4) when available signals actively indicate POOR fit \
+(wrong industry, wrong seniority, red flags visible in the data).
+
+Calibration:
+- 1-3: Poor fit — available signals indicate misalignment (wrong industry, \
+wrong level, visible red flags)
+- 4-5: Weak signals — title or background only loosely related, or signals \
+point to missing key requirements
+- 6-7: Promising — title, company type, and available context suggest a good \
+match for most must-haves
+- 8-9: Strong — multiple signals clearly align with must-haves AND nice-to-haves \
+(right title + right company type + relevant keywords/experience visible)
+- 10: Exceptional — overwhelming evidence of perfect fit across all dimensions
 
 You must respond with valid JSON only, in this exact format:
 {
@@ -144,5 +162,7 @@ def format_candidate_for_scoring(candidate: dict) -> str:
                 degree = e.get("degree", "")
                 if school:
                     parts.append(f"Education: {degree} - {school}")
+    if raw.get("research"):
+        parts.append(f"\nPublic information found online:\n{raw['research']}")
 
     return "\n".join(parts)

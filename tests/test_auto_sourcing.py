@@ -153,6 +153,7 @@ class TestAutoSourcingPipeline:
                 "snippet": "Full cycle AE at StartupCo",
             }
         ]
+        mock_serper.research_person.return_value = "Jane Doe - AE at StartupCo: Experienced full cycle AE closing enterprise deals."
 
         mock_score.return_value = {
             "score": 8.0,
@@ -209,6 +210,7 @@ class TestAutoSourcingPipeline:
                 "snippet": "AE at Co",
             }
         ]
+        mock_serper.research_person.return_value = "Jane Doe - AE at Co"
 
         mock_score.return_value = {
             "score": 7.0, "reasoning": "Good", "strengths": [],

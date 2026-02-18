@@ -352,7 +352,32 @@ def run_auto_sourcing_pipeline(
             len(queries),
         )
 
-        # 3. Score and store each candidate
+        # 3. Enrich candidates with secondary Google search
+        for normalized in all_candidates:
+            name = normalized.get("full_name", "")
+            company = normalized.get("current_company", "")
+            title = normalized.get("current_title", "")
+            if name and name != "Unknown":
+                try:
+                    research = serper_client.research_person(
+                        full_name=name,
+                        current_company=company or None,
+                        current_title=title or None,
+                        num_results=3,
+                    )
+                    if research:
+                        # Append research to experience summary and raw data
+                        existing_summary = normalized.get("experience_summary", "")
+                        normalized["experience_summary"] = (
+                            f"{existing_summary}\n\nAdditional public info:\n{research}"
+                            if existing_summary
+                            else research
+                        )
+                        normalized["raw_data"]["research"] = research
+                except Exception:
+                    logger.warning("Research enrichment failed for %s", name)
+
+        # 4. Score and store each candidate
         scored_count = 0
         total_score = 0.0
 
@@ -385,7 +410,7 @@ def run_auto_sourcing_pipeline(
             scored_count += 1
             total_score += candidate.score
 
-            # 4. Generate outreach for top candidates
+            # 5. Generate outreach for top candidates
             if candidate.score >= outreach_min_score:
                 try:
                     message = generate_outreach(

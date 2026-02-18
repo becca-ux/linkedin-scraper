@@ -135,6 +135,42 @@ def _parse_linkedin_result(result: dict) -> dict | None:
     }
 
 
+    def research_person(
+        self,
+        full_name: str,
+        current_company: str | None = None,
+        current_title: str | None = None,
+        num_results: int = 5,
+    ) -> str:
+        """Do a secondary Google search to gather more public info about a person.
+
+        Returns combined snippet text from search results.
+        """
+        parts = [f'"{full_name}"']
+        if current_company:
+            parts.append(f'"{current_company}"')
+        if current_title:
+            parts.append(current_title)
+
+        query = " ".join(parts)
+        logger.info("Research search: %s", query)
+
+        try:
+            data = self._search(query, num=num_results)
+        except Exception:
+            logger.warning("Research search failed for %s", full_name)
+            return ""
+
+        snippets = []
+        for result in data.get("organic", []):
+            title = result.get("title", "")
+            snippet = result.get("snippet", "")
+            if snippet:
+                snippets.append(f"{title}: {snippet}")
+
+        return "\n".join(snippets)
+
+
 def normalize_serper_candidate(candidate: dict) -> dict:
     """Normalize a Serper search result into our standard Candidate format."""
     slug = candidate["slug"]
