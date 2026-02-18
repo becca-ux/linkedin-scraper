@@ -209,8 +209,9 @@ def search_page():
         linkedin_url = request.form.get("linkedin_url", "").strip() or None
 
         config = current_app.config
-        if not config.get("ANTHROPIC_API_KEY"):
-            error = "ANTHROPIC_API_KEY not configured."
+        anthropic_key = config.get("ANTHROPIC_API_KEY") or ""
+        if not anthropic_key or anthropic_key.startswith("your_"):
+            error = "ANTHROPIC_API_KEY not configured. Set a real API key in your environment variables."
         elif not role_key or not candidate_name or not candidate_text:
             error = "Role, candidate name, and profile text are all required."
         else:
@@ -304,10 +305,14 @@ def auto_source_page():
 
         config = current_app.config
 
-        if not config.get("ANTHROPIC_API_KEY"):
-            error = "ANTHROPIC_API_KEY not configured."
-        elif not config.get("SERPER_API_KEY"):
-            error = "SERPER_API_KEY not configured. Sign up at serper.dev to get a free API key."
+        def _key_ok(name):
+            val = config.get(name) or ""
+            return val and not val.startswith("your_")
+
+        if not _key_ok("ANTHROPIC_API_KEY"):
+            error = "ANTHROPIC_API_KEY not configured. Set a real API key in your environment variables."
+        elif not _key_ok("SERPER_API_KEY"):
+            error = "SERPER_API_KEY not configured. Sign up at serper.dev to get a free API key, then set it in your environment variables."
         elif not role_key or role_key not in ROLE_PROFILES:
             error = "Please select a valid role."
         elif action == "preview":
@@ -366,9 +371,11 @@ def api_auto_source():
         ), 400
 
     config = current_app.config
-    if not config.get("SERPER_API_KEY"):
+    serper_key = config.get("SERPER_API_KEY") or ""
+    anthropic_key = config.get("ANTHROPIC_API_KEY") or ""
+    if not serper_key or serper_key.startswith("your_"):
         return jsonify({"error": "SERPER_API_KEY not configured"}), 500
-    if not config.get("ANTHROPIC_API_KEY"):
+    if not anthropic_key or anthropic_key.startswith("your_"):
         return jsonify({"error": "ANTHROPIC_API_KEY not configured"}), 500
 
     try:
