@@ -8,10 +8,15 @@ from flask import Blueprint, current_app, jsonify, render_template, request
 from app import db
 from app.models import Candidate, ScoringRun
 from app.outreach.generator import generate_outreach
-from app.pipeline import run_scoring_pipeline, run_linkedin_search_pipeline
+from app.pipeline import (
+    run_scoring_pipeline,
+    run_linkedin_search_pipeline,
+    run_auto_sourcing_pipeline,
+)
 from app.scheduler import schedule_scoring_run, _scheduled_jobs
 from app.scoring.profiles import ROLE_PROFILES, get_profile, get_example_cvs
 from app.scoring.scorer import score_candidate
+from app.sourcing.query_generator import generate_search_queries
 
 main_bp = Blueprint("main", __name__)
 
@@ -281,6 +286,107 @@ def search_page():
         result=result,
         error=error,
     )
+
+
+@main_bp.route("/auto-source", methods=["GET", "POST"])
+def auto_source_page():
+    """One-click automated candidate sourcing from exemplar CVs."""
+    result = None
+    error = None
+    queries = None
+
+    if request.method == "POST":
+        role_key = request.form.get("role_key")
+        country = request.form.get("country", "GB").strip() or "GB"
+        city = request.form.get("city", "London").strip() or "London"
+        page_size = int(request.form.get("page_size", 10))
+        action = request.form.get("action", "run")
+
+        config = current_app.config
+
+        if not config.get("ANTHROPIC_API_KEY"):
+            error = "ANTHROPIC_API_KEY not configured."
+        elif not config.get("PROXYCURL_API_KEY"):
+            error = "PROXYCURL_API_KEY not configured."
+        elif not role_key or role_key not in ROLE_PROFILES:
+            error = "Please select a valid role."
+        elif action == "preview":
+            # Just generate and show the queries without running them
+            try:
+                queries = generate_search_queries(
+                    config["ANTHROPIC_API_KEY"], role_key
+                )
+            except Exception as e:
+                error = f"Failed to generate queries: {e}"
+        else:
+            # Full auto-sourcing run
+            try:
+                run = run_auto_sourcing_pipeline(
+                    proxycurl_api_key=config["PROXYCURL_API_KEY"],
+                    anthropic_api_key=config["ANTHROPIC_API_KEY"],
+                    role_key=role_key,
+                    country=country,
+                    city=city,
+                    page_size=min(page_size, 25),
+                )
+                result = {
+                    "run_id": run.id,
+                    "candidates_scored": run.candidates_scored,
+                    "avg_score": run.avg_score,
+                    "status": run.status,
+                }
+            except Exception as e:
+                error = str(e)
+
+    return render_template(
+        "auto_source.html",
+        role_keys=ROLE_PROFILES,
+        result=result,
+        error=error,
+        queries=queries,
+    )
+
+
+@main_bp.route("/api/auto-source", methods=["POST"])
+@require_api_key
+def api_auto_source():
+    """API endpoint: fully automated candidate sourcing."""
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Request body must be JSON"}), 400
+
+    role_key = data.get("role_key")
+    if not role_key or role_key not in ROLE_PROFILES:
+        return jsonify(
+            {"error": f"Invalid role_key. Valid: {list(ROLE_PROFILES.keys())}"}
+        ), 400
+
+    config = current_app.config
+    if not config.get("PROXYCURL_API_KEY"):
+        return jsonify({"error": "PROXYCURL_API_KEY not configured"}), 500
+    if not config.get("ANTHROPIC_API_KEY"):
+        return jsonify({"error": "ANTHROPIC_API_KEY not configured"}), 500
+
+    try:
+        run = run_auto_sourcing_pipeline(
+            proxycurl_api_key=config["PROXYCURL_API_KEY"],
+            anthropic_api_key=config["ANTHROPIC_API_KEY"],
+            role_key=role_key,
+            country=data.get("country", "GB"),
+            city=data.get("city", "London"),
+            page_size=min(data.get("page_size", 10), 25),
+            outreach_min_score=data.get("outreach_min_score", 7.0),
+        )
+        return jsonify(
+            {
+                "status": run.status,
+                "run_id": run.id,
+                "candidates_scored": run.candidates_scored,
+                "avg_score": run.avg_score,
+            }
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @main_bp.route("/api/schedule", methods=["POST"])

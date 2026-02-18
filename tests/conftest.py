@@ -12,6 +12,7 @@ class TestConfig:
     SECRET_KEY = "test-secret"
     AMPLEMARKET_API_KEY = "test-amplemarket-key"
     ANTHROPIC_API_KEY = "test-anthropic-key"
+    PROXYCURL_API_KEY = "test-proxycurl-key"
     API_KEY = "test-api-key"
 
 

@@ -56,6 +56,55 @@ def schedule_scoring_run(
     logger.info("Scheduled %s scoring for list %s (%s)", role_key, list_id, schedule)
 
 
+def schedule_auto_sourcing(
+    app,
+    role_key: str,
+    schedule: str = "daily",
+    country: str = "GB",
+    city: str = "London",
+    page_size: int = 10,
+):
+    """Schedule a recurring auto-sourcing run.
+
+    Args:
+        app: Flask app instance.
+        role_key: Role to source for.
+        schedule: "daily" or "weekly".
+        country: Country code for LinkedIn search.
+        city: City for LinkedIn search.
+        page_size: Results per query.
+    """
+    from app.pipeline import run_auto_sourcing_pipeline
+
+    def job():
+        with app.app_context():
+            try:
+                run_auto_sourcing_pipeline(
+                    proxycurl_api_key=app.config["PROXYCURL_API_KEY"],
+                    anthropic_api_key=app.config["ANTHROPIC_API_KEY"],
+                    role_key=role_key,
+                    country=country,
+                    city=city,
+                    page_size=page_size,
+                )
+            except Exception:
+                logger.exception("Scheduled auto-sourcing run failed")
+
+    job_id = f"auto_source_{role_key}"
+
+    if schedule == "weekly":
+        scheduler.add_job(
+            job, "cron", day_of_week="mon", hour=8, id=job_id, replace_existing=True
+        )
+    else:
+        scheduler.add_job(job, "cron", hour=8, id=job_id, replace_existing=True)
+
+    _scheduled_jobs.append(
+        {"type": "auto_source", "role_key": role_key, "schedule": schedule}
+    )
+    logger.info("Scheduled auto-sourcing for %s (%s)", role_key, schedule)
+
+
 def start_scheduler():
     """Start the background scheduler."""
     if not scheduler.running:
