@@ -2,6 +2,8 @@
 
 from unittest.mock import patch, MagicMock
 
+import pytest
+
 from app.models import Candidate, ScoringRun
 
 
@@ -251,7 +253,7 @@ class TestAutoSourcingPipeline:
 
     @patch("app.pipeline.SerperClient")
     @patch("app.pipeline.generate_search_queries")
-    def test_skips_failed_search_queries(
+    def test_reports_all_queries_failed(
         self, mock_gen_queries, MockSerper, app, db
     ):
         mock_gen_queries.return_value = [
@@ -266,14 +268,16 @@ class TestAutoSourcingPipeline:
         from app.pipeline import run_auto_sourcing_pipeline
 
         with app.app_context():
-            run = run_auto_sourcing_pipeline(
-                serper_api_key="fake",
-                anthropic_api_key="fake",
-                role_key="ae",
-            )
+            with pytest.raises(RuntimeError, match="search queries failed"):
+                run_auto_sourcing_pipeline(
+                    serper_api_key="fake",
+                    anthropic_api_key="fake",
+                    role_key="ae",
+                )
 
-            assert run.status == "completed"
-            assert run.candidates_scored == 0
+            run = ScoringRun.query.first()
+            assert run.status == "failed"
+            assert "search queries failed" in run.error_message
 
 
 class TestAutoSourceRoutes:

@@ -307,6 +307,7 @@ def run_auto_sourcing_pipeline(
         serper_client = SerperClient(serper_api_key)
         seen_urls = set()
         all_candidates = []
+        query_failures = []
 
         for query in queries:
             role_title = query.get("role_title", profile["title"])
@@ -331,10 +332,11 @@ def run_auto_sourcing_pipeline(
                     current_company_name=current_company_name,
                     num_results=num_results,
                 )
-            except Exception:
+            except Exception as e:
                 logger.exception(
                     "Search query failed for title='%s', skipping", role_title
                 )
+                query_failures.append(f"{role_title}: {e}")
                 continue
 
             for result in results:
@@ -347,10 +349,19 @@ def run_auto_sourcing_pipeline(
                 all_candidates.append(normalized)
 
         logger.info(
-            "Auto-sourcing: found %d unique candidates across %d queries",
+            "Auto-sourcing: found %d unique candidates across %d queries (%d failed)",
             len(all_candidates),
             len(queries),
+            len(query_failures),
         )
+
+        # If ALL queries failed, mark the run as failed with details
+        if not all_candidates and query_failures:
+            error_detail = "; ".join(query_failures[:3])
+            raise RuntimeError(
+                f"All {len(query_failures)} search queries failed. "
+                f"Check your Serper API key / credits. First error: {error_detail}"
+            )
 
         # 3. Enrich candidates with secondary Google search
         for normalized in all_candidates:
