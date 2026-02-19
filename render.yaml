@@ -30,4 +30,4 @@ services:
       - key: FLASK_APP
         value: app:create_app
       - key: PYTHON_VERSION
-        value: "3.12"
+        value: "3.12.0"
