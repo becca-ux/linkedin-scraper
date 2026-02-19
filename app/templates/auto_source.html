@@ -2,24 +2,24 @@
 {% block title %}Auto Source{% endblock %}
 {% block content %}
 
-<h2 style="margin-bottom: 8px;">Auto Source Candidates</h2>
-<p style="color:#86868b; margin-bottom:20px;">Claude analyses your ideal candidate CVs, generates LinkedIn search queries, finds similar people, scores them, and writes outreach — all automatically.</p>
+<h2 style="margin-bottom: 8px; font-size: 28px;">Auto Source Candidates</h2>
+<p style="color:rgba(255,255,255,0.45); margin-bottom:20px;">Claude analyses your ideal candidate CVs, generates LinkedIn search queries, finds similar people, scores them, and writes outreach — all automatically.</p>
 
 {% if not setup_status.anthropic or not setup_status.serper %}
-<div class="card" style="margin-bottom: 20px; border-left: 4px solid #ffc107;">
+<div class="card" style="margin-bottom: 20px; border-left: 3px solid #d4a8a0;">
     <h2 style="margin-bottom:12px;">Setup Required</h2>
-    <p style="color:#86868b; margin-bottom:12px;">Auto Source needs two API keys to work. Set them as environment variables (or in a <code>.env</code> file in the project root):</p>
+    <p style="color:rgba(255,255,255,0.45); margin-bottom:12px;">Auto Source needs two API keys to work. Set them as environment variables (or in a <code style="background:rgba(255,255,255,0.08); padding:2px 6px; border-radius:4px;">.env</code> file in the project root):</p>
     <table>
         <tbody>
             <tr>
                 <td style="font-weight:600;">ANTHROPIC_API_KEY</td>
-                <td>{% if setup_status.anthropic %}<span style="color:#28a745;">Configured</span>{% else %}<span style="color:#dc3545;">Missing</span>{% endif %}</td>
-                <td style="color:#86868b; font-size:13px;">Get from <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a></td>
+                <td>{% if setup_status.anthropic %}<span style="color:#e8b4a8;">Configured</span>{% else %}<span style="color:#c47070;">Missing</span>{% endif %}</td>
+                <td style="color:rgba(255,255,255,0.4); font-size:13px;">Get from <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a></td>
             </tr>
             <tr>
                 <td style="font-weight:600;">SERPER_API_KEY</td>
-                <td>{% if setup_status.serper %}<span style="color:#28a745;">Configured</span>{% else %}<span style="color:#dc3545;">Missing</span>{% endif %}</td>
-                <td style="color:#86868b; font-size:13px;">Get from <a href="https://serper.dev" target="_blank">serper.dev</a> (free tier: 2,500 searches)</td>
+                <td>{% if setup_status.serper %}<span style="color:#e8b4a8;">Configured</span>{% else %}<span style="color:#c47070;">Missing</span>{% endif %}</td>
+                <td style="color:rgba(255,255,255,0.4); font-size:13px;">Get from <a href="https://serper.dev" target="_blank">serper.dev</a> (free tier: 2,500 searches)</td>
             </tr>
         </tbody>
     </table>
@@ -27,34 +27,34 @@
 {% endif %}
 
 {% if error %}
-<div style="background: #f8d7da; color: #721c24; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px;">
+<div style="background: rgba(196,112,112,0.15); color: #e8a0a0; padding: 12px 16px; border-radius: 10px; margin-bottom: 20px; border: 1px solid rgba(196,112,112,0.25);">
     {{ error }}
 </div>
 {% endif %}
 
 {% if result %}
-<div class="card" style="margin-bottom: 20px; border-left: 4px solid {% if result.status == 'completed' %}#28a745{% else %}#ffc107{% endif %};">
+<div class="card" style="margin-bottom: 20px; border-left: 3px solid {% if result.status == 'completed' %}#e8b4a8{% else %}#d4c8a0{% endif %};">
     <h2 style="margin-bottom:12px;">{% if result.status == 'completed' %}Sourcing Complete{% else %}{{ result.status|title }}{% endif %}</h2>
     {% if result.candidates_scored %}
     <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:16px;">
         <div>
-            <div style="font-size:13px; color:#86868b; text-transform:uppercase; letter-spacing:0.5px;">Candidates Found</div>
-            <div style="font-size:28px; font-weight:700; margin-top:4px;">{{ result.candidates_scored }}</div>
+            <div style="font-size:11px; color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:1px;">Candidates Found</div>
+            <div style="font-size:28px; font-weight:700; margin-top:4px; color:#f5efe6; font-family:'DM Serif Display',serif;">{{ result.candidates_scored }}</div>
         </div>
         <div>
-            <div style="font-size:13px; color:#86868b; text-transform:uppercase; letter-spacing:0.5px;">Average Score</div>
-            <div style="font-size:28px; font-weight:700; margin-top:4px;">{{ "%.1f"|format(result.avg_score or 0) }}/10</div>
+            <div style="font-size:11px; color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:1px;">Average Score</div>
+            <div style="font-size:28px; font-weight:700; margin-top:4px; color:#f5efe6; font-family:'DM Serif Display',serif;">{{ "%.1f"|format(result.avg_score or 0) }}/10</div>
         </div>
         <div>
-            <div style="font-size:13px; color:#86868b; text-transform:uppercase; letter-spacing:0.5px;">Status</div>
-            <div style="font-size:28px; font-weight:700; margin-top:4px; color:#28a745;">{{ result.status }}</div>
+            <div style="font-size:11px; color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:1px;">Status</div>
+            <div style="font-size:28px; font-weight:700; margin-top:4px; color:#e8b4a8; font-family:'DM Serif Display',serif;">{{ result.status }}</div>
         </div>
     </div>
     {% else %}
-    <p style="color:#86868b;">{{ result.message }}</p>
+    <p style="color:rgba(255,255,255,0.45);">{{ result.message }}</p>
     {% endif %}
     <p style="margin-top:16px; font-size:14px;">
-        <a href="/?min_score=6">View scored candidates on dashboard</a>
+        <a href="/?min_score=6">View scored candidates on dashboard &rarr;</a>
     </p>
 </div>
 {% endif %}
@@ -62,7 +62,7 @@
 {% if queries %}
 <div class="card" style="margin-bottom: 20px;">
     <h2 style="margin-bottom:12px;">Generated Search Queries</h2>
-    <p style="color:#86868b; margin-bottom:16px;">Claude analyzed your exemplar CVs and generated these LinkedIn searches:</p>
+    <p style="color:rgba(255,255,255,0.45); margin-bottom:16px;">Claude analyzed your exemplar CVs and generated these LinkedIn searches:</p>
     <table>
         <thead>
             <tr>
@@ -78,11 +78,11 @@
             {% for q in queries %}
             <tr>
                 <td>{{ loop.index }}</td>
-                <td style="font-weight:600;">{{ q.role_title }}</td>
+                <td style="font-weight:600; color:#f5efe6;">{{ q.role_title }}</td>
                 <td>{{ q.keyword or '—' }}</td>
                 <td>{{ q.past_role_title or '—' }}</td>
                 <td>{{ q.current_company_name or '—' }}</td>
-                <td style="color:#86868b; font-size:13px;">{{ q.rationale }}</td>
+                <td style="color:rgba(255,255,255,0.4); font-size:13px;">{{ q.rationale }}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -94,16 +94,16 @@
     <form method="POST" action="/auto-source">
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
             <div>
-                <label style="display:block; font-size:13px; color:#86868b; margin-bottom:4px;">Role to source for</label>
-                <select name="role_key" style="width:100%; padding:8px 12px; border:1px solid #d2d2d7; border-radius:8px; font-size:14px;">
+                <label style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:1px; color:rgba(255,255,255,0.35); margin-bottom:6px;">Role to source for</label>
+                <select name="role_key" style="width:100%; padding:10px 14px;">
                     {% for key, profile in role_keys.items() %}
                     <option value="{{ key }}">{{ profile.title }}</option>
                     {% endfor %}
                 </select>
             </div>
             <div>
-                <label style="display:block; font-size:13px; color:#86868b; margin-bottom:4px;">Results per query</label>
-                <select name="page_size" style="width:100%; padding:8px 12px; border:1px solid #d2d2d7; border-radius:8px; font-size:14px;">
+                <label style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:1px; color:rgba(255,255,255,0.35); margin-bottom:6px;">Results per query</label>
+                <select name="page_size" style="width:100%; padding:10px 14px;">
                     <option value="5">5 (quick test)</option>
                     <option value="10" selected>10 (standard)</option>
                     <option value="25">25 (thorough)</option>
@@ -111,20 +111,20 @@
             </div>
         </div>
         <div style="margin-bottom:20px;">
-            <label style="display:block; font-size:13px; color:#86868b; margin-bottom:4px;">City</label>
-            <input type="text" name="city" value="London" style="width:300px; padding:8px 12px; border:1px solid #d2d2d7; border-radius:8px; font-size:14px;">
+            <label style="display:block; font-size:11px; text-transform:uppercase; letter-spacing:1px; color:rgba(255,255,255,0.35); margin-bottom:6px;">City</label>
+            <input type="text" name="city" value="London" style="width:300px; padding:10px 14px;">
         </div>
         <div style="display:flex; gap:12px; align-items:center;">
-            <button type="submit" name="action" value="preview" style="padding:10px 24px; background:#fff; color:#0071e3; border:1px solid #0071e3; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600;"
+            <button type="submit" name="action" value="preview" class="btn-secondary"
                 {% if not setup_status.anthropic %}disabled title="ANTHROPIC_API_KEY required"{% endif %}>
                 Preview Queries
             </button>
-            <button id="run-btn" type="submit" name="action" value="run" style="padding:10px 24px; background:#0071e3; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600;"
+            <button id="run-btn" type="submit" name="action" value="run" class="btn-primary"
                 {% if not setup_status.anthropic or not setup_status.serper %}disabled title="API keys required — see setup above"{% endif %}>
-                Find Candidates
+                Find Candidates &rarr;
             </button>
-            <span id="loading-msg" style="display:none; color:#86868b; font-size:13px;">
-                Sourcing candidates — this takes 1-2 minutes, please wait...
+            <span id="loading-msg" style="display:none; color:rgba(255,255,255,0.4); font-size:13px;">
+                Sourcing candidates — this takes 1-2 minutes...
             </span>
         </div>
     </form>
@@ -144,20 +144,20 @@ document.querySelector('form').addEventListener('submit', function(e) {
     <h2 style="margin-bottom:8px;">How it works</h2>
     <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:16px; margin-top:16px;">
         <div style="text-align:center;">
-            <div style="font-size:24px; font-weight:700; color:#0071e3;">1</div>
-            <div style="font-size:13px; color:#86868b; margin-top:4px;">Claude reads your exemplar CVs and extracts search patterns</div>
+            <div style="font-size:28px; font-family:'DM Serif Display',serif; color:#d4a8a0;">1</div>
+            <div style="font-size:13px; color:rgba(255,255,255,0.4); margin-top:4px;">Claude reads your exemplar CVs and extracts search patterns</div>
         </div>
         <div style="text-align:center;">
-            <div style="font-size:24px; font-weight:700; color:#0071e3;">2</div>
-            <div style="font-size:13px; color:#86868b; margin-top:4px;">Generates 3-6 targeted LinkedIn search queries</div>
+            <div style="font-size:28px; font-family:'DM Serif Display',serif; color:#d4a8a0;">2</div>
+            <div style="font-size:13px; color:rgba(255,255,255,0.4); margin-top:4px;">Generates 3-6 targeted LinkedIn search queries</div>
         </div>
         <div style="text-align:center;">
-            <div style="font-size:24px; font-weight:700; color:#0071e3;">3</div>
-            <div style="font-size:13px; color:#86868b; margin-top:4px;">Searches Google for matching LinkedIn profiles via Serper.dev</div>
+            <div style="font-size:28px; font-family:'DM Serif Display',serif; color:#d4a8a0;">3</div>
+            <div style="font-size:13px; color:rgba(255,255,255,0.4); margin-top:4px;">Searches Google for matching LinkedIn profiles via Serper.dev</div>
         </div>
         <div style="text-align:center;">
-            <div style="font-size:24px; font-weight:700; color:#0071e3;">4</div>
-            <div style="font-size:13px; color:#86868b; margin-top:4px;">Scores every candidate and writes outreach for top fits</div>
+            <div style="font-size:28px; font-family:'DM Serif Display',serif; color:#d4a8a0;">4</div>
+            <div style="font-size:13px; color:rgba(255,255,255,0.4); margin-top:4px;">Scores every candidate and writes outreach for top fits</div>
         </div>
     </div>
 </div>

@@ -7,13 +7,13 @@
 <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
     <div>
         <div class="card">
-            <h2>
+            <h2 style="font-size: 24px;">
                 {{ candidate.full_name }}
-                <span class="score-badge {% if candidate.score >= 7 %}score-high{% elif candidate.score >= 5 %}score-mid{% else %}score-low{% endif %}" style="margin-left:8px;">
+                <span class="score-badge {% if candidate.score >= 7 %}score-high{% elif candidate.score >= 5 %}score-mid{% else %}score-low{% endif %}" style="margin-left:8px; font-size:14px;">
                     {{ "%.1f"|format(candidate.score) }}/10
                 </span>
             </h2>
-            <p style="color:#86868b; margin-top:4px;">
+            <p style="color:rgba(255,255,255,0.45); margin-top:6px;">
                 {{ candidate.current_title or '' }}
                 {% if candidate.current_company %} at {{ candidate.current_company }}{% endif %}
             </p>
@@ -21,7 +21,7 @@
 
         <div class="card">
             <h2>Score Reasoning</h2>
-            <p>{{ candidate.score_reasoning or 'No reasoning available.' }}</p>
+            <p style="color:#d8d0c8; line-height:1.7;">{{ candidate.score_reasoning or 'No reasoning available.' }}</p>
         </div>
 
         {% if candidate.outreach_message %}
@@ -34,7 +34,7 @@
         {% if candidate.experience_summary %}
         <div class="card">
             <h2>Experience</h2>
-            <pre style="white-space:pre-wrap; font-family:inherit;">{{ candidate.experience_summary }}</pre>
+            <pre style="white-space:pre-wrap; font-family:'Inter',sans-serif; color:#d8d0c8; line-height:1.7; font-size:14px;">{{ candidate.experience_summary }}</pre>
         </div>
         {% endif %}
     </div>
@@ -56,7 +56,7 @@
             {% if candidate.linkedin_url %}
             <div class="sidebar-section">
                 <h3>LinkedIn</h3>
-                <p><a href="{{ candidate.linkedin_url }}" target="_blank">View Profile</a></p>
+                <p><a href="{{ candidate.linkedin_url }}" target="_blank">View Profile &rarr;</a></p>
             </div>
             {% endif %}
             <div class="sidebar-section">

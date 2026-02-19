@@ -4,9 +4,9 @@
 
 {% set running_runs = recent_runs | selectattr('status', 'equalto', 'running') | list %}
 {% if running_runs %}
-<div class="card" style="margin-bottom:20px; border-left:4px solid #ffc107; background:#fff8e1;">
-    <p style="margin:0; font-weight:600;">Auto-sourcing is running... this page will refresh automatically.</p>
-    <p style="margin:4px 0 0; color:#86868b; font-size:13px;">Candidates will appear below as they are scored. Started {{ running_runs[0].started_at.strftime('%H:%M') if running_runs[0].started_at else 'just now' }}.</p>
+<div class="card" style="margin-bottom:20px; border-left:3px solid #d4a8a0;">
+    <p style="margin:0; font-weight:600; color:#f5efe6;">Auto-sourcing is running...</p>
+    <p style="margin:4px 0 0; color:rgba(255,255,255,0.4); font-size:13px;">Candidates will appear below as they are scored. Started {{ running_runs[0].started_at.strftime('%H:%M') if running_runs[0].started_at else 'just now' }}.</p>
 </div>
 <script>setTimeout(function(){ window.location.reload(); }, 10000);</script>
 {% endif %}
@@ -26,6 +26,7 @@
 </form>
 
 {% if candidates %}
+<div class="card" style="padding:0; overflow:hidden;">
 <table>
     <thead>
         <tr>
@@ -49,18 +50,19 @@
             <td>{{ c.current_title or '—' }}</td>
             <td>{{ c.current_company or '—' }}</td>
             <td>{{ c.target_role or '—' }}</td>
-            <td>{% if c.outreach_message %}Ready{% else %}—{% endif %}</td>
+            <td>{% if c.outreach_message %}<span style="color:#d4a8a0;">Ready</span>{% else %}—{% endif %}</td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
+</div>
 {% else %}
 <div class="empty-state">
     <h2>No candidates yet</h2>
     <p>Get started by sourcing candidates automatically or scoring one manually.</p>
     <div style="display:flex; gap:12px; justify-content:center; margin-top:20px; flex-wrap:wrap;">
-        <a href="/auto-source" style="padding:10px 24px; background:#0071e3; color:#fff; border-radius:8px; font-size:14px; font-weight:500; text-decoration:none;">Auto Source Candidates</a>
-        <a href="/search" style="padding:10px 24px; background:#fff; color:#0071e3; border:1px solid #0071e3; border-radius:8px; font-size:14px; font-weight:500; text-decoration:none;">Score a Candidate</a>
+        <a href="/auto-source" class="btn-primary" style="text-decoration:none;">Auto Source Candidates</a>
+        <a href="/search" class="btn-secondary" style="text-decoration:none;">Score a Candidate</a>
     </div>
 </div>
 {% endif %}
@@ -84,13 +86,13 @@
                     </span>
                 </td>
                 <td>{{ run.started_at.strftime('%Y-%m-%d %H:%M') if run.started_at else '—' }}</td>
-                <td style="max-width:300px; font-size:12px; color:#721c24;">{{ run.error_message or '' }}</td>
+                <td style="max-width:300px; font-size:12px; color:#a898b8;">{{ run.error_message or '' }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
     {% else %}
-    <p style="color:#86868b; font-size:14px;">No runs yet. Use <a href="/auto-source">Auto Source</a> to start finding candidates.</p>
+    <p style="color:rgba(255,255,255,0.4); font-size:14px;">No runs yet. Use <a href="/auto-source">Auto Source</a> to start finding candidates.</p>
     {% endif %}
 </div>
 
