@@ -1,11 +1,11 @@
 databases:
   - name: hook-talent-db
-    plan: starter
+    plan: free
 
 services:
   - type: web
     name: hook-talent-pipeline
-    plan: starter
+    plan: free
     runtime: python
     buildCommand: pip install -r requirements.txt && flask db upgrade
     startCommand: gunicorn wsgi:application -c gunicorn.conf.py
