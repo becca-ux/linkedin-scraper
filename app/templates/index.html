@@ -41,6 +41,7 @@
             <th>Title</th>
             <th>Company</th>
             <th>Role</th>
+            <th>Status</th>
             <th>Outreach</th>
         </tr>
     </thead>
@@ -56,6 +57,15 @@
             <td>{{ c.current_title or '—' }}</td>
             <td>{{ c.current_company or '—' }}</td>
             <td>{{ c.target_role or '—' }}</td>
+            <td>
+                {% if c.feedback == 'approved' %}
+                <span style="color:#e8b4a8; font-size:13px;">Approved</span>
+                {% elif c.feedback == 'rejected' %}
+                <span style="color:#a898b8; font-size:13px;" title="{{ c.feedback_reason or '' }}">Rejected</span>
+                {% else %}
+                <span style="color:rgba(255,255,255,0.2); font-size:13px;">—</span>
+                {% endif %}
+            </td>
             <td>{% if c.outreach_message %}<span style="color:#d4a8a0;">Ready</span>{% else %}—{% endif %}</td>
         </tr>
         {% endfor %}

@@ -95,11 +95,47 @@ def index():
     )
 
 
+FEEDBACK_REASONS = [
+    ("wrong_location", "Wrong location"),
+    ("too_senior", "Too senior"),
+    ("too_junior", "Too junior"),
+    ("not_saas", "No SaaS experience"),
+    ("wrong_industry", "Wrong industry"),
+    ("no_startup", "No startup experience"),
+    ("other", "Other"),
+]
+
+
 @main_bp.route("/candidate/<int:candidate_id>")
 def candidate_detail(candidate_id):
     """Detail view for a single candidate."""
     candidate = db.get_or_404(Candidate, candidate_id)
-    return render_template("candidate.html", candidate=candidate)
+    return render_template(
+        "candidate.html", candidate=candidate, feedback_reasons=FEEDBACK_REASONS
+    )
+
+
+@main_bp.route("/candidate/<int:candidate_id>/feedback", methods=["POST"])
+def candidate_feedback(candidate_id):
+    """Submit feedback (approve/reject) for a candidate."""
+    from datetime import datetime, timezone
+
+    candidate = db.get_or_404(Candidate, candidate_id)
+
+    action = request.form.get("action")  # "approved" or "rejected"
+    reason = request.form.get("reason", "").strip() or None
+    note = request.form.get("note", "").strip() or None
+
+    if action not in ("approved", "rejected"):
+        return redirect(url_for("main.candidate_detail", candidate_id=candidate_id))
+
+    candidate.feedback = action
+    candidate.feedback_reason = reason
+    candidate.feedback_note = note
+    candidate.feedback_at = datetime.now(timezone.utc)
+    db.session.commit()
+
+    return redirect(url_for("main.candidate_detail", candidate_id=candidate_id))
 
 
 # ---------- API ----------

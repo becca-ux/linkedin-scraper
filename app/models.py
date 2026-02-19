@@ -27,6 +27,12 @@ class Candidate(db.Model):
     outreach_message = db.Column(db.Text)
     outreach_generated_at = db.Column(db.DateTime)
 
+    # Feedback
+    feedback = db.Column(db.String(20))  # "approved", "rejected", or NULL
+    feedback_reason = db.Column(db.String(255))  # e.g. "wrong_location", "too_senior"
+    feedback_note = db.Column(db.Text)  # optional free-text note
+    feedback_at = db.Column(db.DateTime)
+
     # Metadata
     source_list = db.Column(db.String(255))
     created_at = db.Column(

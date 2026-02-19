@@ -10,7 +10,7 @@ from app.api.serper import SerperClient, normalize_serper_candidate
 from app.models import Candidate, ScoringRun
 from app.outreach.generator import generate_outreach
 from app.scoring.profiles import get_example_cvs
-from app.scoring.scorer import format_candidate_for_scoring, score_candidate
+from app.scoring.scorer import build_feedback_history, format_candidate_for_scoring, score_candidate
 from app.sourcing.query_generator import generate_search_queries
 
 logger = logging.getLogger(__name__)
@@ -389,6 +389,11 @@ def run_auto_sourcing_pipeline(
                     logger.warning("Research enrichment failed for %s", name)
 
         # 4. Score and store each candidate
+        feedback_history = build_feedback_history(role_key)
+        if feedback_history:
+            logger.info("Auto-sourcing: using feedback from %d past reviews",
+                        feedback_history.count("\n") + 1)
+
         scored_count = 0
         total_score = 0.0
 
@@ -409,7 +414,8 @@ def run_auto_sourcing_pipeline(
 
             candidate_text = format_candidate_for_scoring(normalized)
             score_result = score_candidate(
-                anthropic_api_key, candidate_text, role_key, example_cvs
+                anthropic_api_key, candidate_text, role_key, example_cvs,
+                feedback_history=feedback_history,
             )
 
             candidate.score = score_result.get("score", 0)

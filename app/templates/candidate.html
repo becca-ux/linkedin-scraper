@@ -12,6 +12,11 @@
                 <span class="score-badge {% if candidate.score >= 7 %}score-high{% elif candidate.score >= 5 %}score-mid{% else %}score-low{% endif %}" style="margin-left:8px; font-size:14px;">
                     {{ "%.1f"|format(candidate.score) }}/10
                 </span>
+                {% if candidate.feedback == 'approved' %}
+                <span style="margin-left:8px; font-size:13px; color:#e8b4a8;">Approved</span>
+                {% elif candidate.feedback == 'rejected' %}
+                <span style="margin-left:8px; font-size:13px; color:#a898b8;">Rejected{% if candidate.feedback_reason %} — {{ candidate.feedback_reason }}{% endif %}</span>
+                {% endif %}
             </h2>
             <p style="color:rgba(255,255,255,0.45); margin-top:6px;">
                 {{ candidate.current_title or '' }}
@@ -68,7 +73,60 @@
                 <p>{{ candidate.source_list or '—' }}</p>
             </div>
         </div>
+
+        <div class="card">
+            <h3 style="font-size:11px; text-transform:uppercase; letter-spacing:1px; color:rgba(255,255,255,0.35); margin-bottom:12px; font-family:'Inter',sans-serif; font-weight:600;">Feedback</h3>
+
+            {% if candidate.feedback %}
+            <div style="margin-bottom:12px; padding:10px 14px; border-radius:10px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06);">
+                <p style="font-size:14px; font-weight:600; color:{% if candidate.feedback == 'approved' %}#e8b4a8{% else %}#a898b8{% endif %};">
+                    {{ candidate.feedback|title }}
+                    {% if candidate.feedback_reason %} — {{ candidate.feedback_reason }}{% endif %}
+                </p>
+                {% if candidate.feedback_note %}
+                <p style="font-size:13px; color:rgba(255,255,255,0.4); margin-top:4px;">{{ candidate.feedback_note }}</p>
+                {% endif %}
+                <p style="font-size:11px; color:rgba(255,255,255,0.25); margin-top:6px;">
+                    {{ candidate.feedback_at.strftime('%Y-%m-%d %H:%M') if candidate.feedback_at else '' }}
+                </p>
+            </div>
+            {% endif %}
+
+            <form method="POST" action="/candidate/{{ candidate.id }}/feedback" id="feedback-form">
+                <div style="display:flex; gap:8px; margin-bottom:12px;">
+                    <button type="submit" name="action" value="approved" class="btn-primary" style="flex:1; padding:8px 12px; font-size:13px;{% if candidate.feedback == 'approved' %} background:rgba(232,180,168,0.15); border-color:#e8b4a8;{% endif %}">
+                        Approve
+                    </button>
+                    <button type="button" id="reject-toggle" class="btn-secondary" style="flex:1; padding:8px 12px; font-size:13px;{% if candidate.feedback == 'rejected' %} background:rgba(168,152,184,0.15); border-color:#a898b8;{% endif %}">
+                        Reject
+                    </button>
+                </div>
+                <div id="reject-details" style="display:{% if candidate.feedback == 'rejected' %}block{% else %}none{% endif %};">
+                    <select name="reason" style="width:100%; padding:8px 12px; margin-bottom:8px; font-size:13px;">
+                        <option value="">Select reason...</option>
+                        {% for code, label in feedback_reasons %}
+                        <option value="{{ code }}" {% if candidate.feedback_reason == code %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <textarea name="note" rows="2" placeholder="Optional note..." style="width:100%; padding:8px 12px; font-size:13px; resize:vertical;">{{ candidate.feedback_note or '' }}</textarea>
+                    <button type="submit" name="action" value="rejected" class="btn-secondary" style="width:100%; margin-top:8px; padding:8px 12px; font-size:13px; color:#a898b8; border-color:rgba(168,152,184,0.4);">
+                        Confirm Reject
+                    </button>
+                </div>
+            </form>
+
+            <p style="font-size:11px; color:rgba(255,255,255,0.2); margin-top:10px;">
+                Feedback trains future scoring runs
+            </p>
+        </div>
     </div>
 </div>
+
+<script>
+document.getElementById('reject-toggle').addEventListener('click', function() {
+    var details = document.getElementById('reject-details');
+    details.style.display = details.style.display === 'none' ? 'block' : 'none';
+});
+</script>
 
 {% endblock %}

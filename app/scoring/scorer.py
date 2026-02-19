@@ -72,6 +72,7 @@ def score_candidate(
     candidate_info: str,
     role_key: str,
     example_cvs: str | None = None,
+    feedback_history: str | None = None,
 ) -> dict:
     """Score a single candidate against a role profile using Claude.
 
@@ -96,6 +97,16 @@ def score_candidate(
         user_message += f"""
 ## Example CVs of Strong Candidates (for calibration)
 {example_cvs}
+"""
+
+    if feedback_history:
+        user_message += f"""
+## Hiring Manager Feedback on Past Candidates
+The hiring manager has reviewed previous candidates and given this feedback.
+Use it to calibrate your scoring — penalise patterns they've rejected and
+reward patterns they've approved.
+
+{feedback_history}
 """
 
     user_message += f"""
@@ -129,6 +140,46 @@ Score this candidate against the profile above. Return JSON only.
         }
 
     return result
+
+
+def build_feedback_history(role_key: str) -> str | None:
+    """Query past feedback for a role and format it for the scoring prompt.
+
+    Returns None if no feedback exists yet.
+    """
+    from app.models import Candidate
+    from app.scoring.profiles import get_profile
+
+    profile = get_profile(role_key)
+    role_title = profile["title"]
+
+    reviewed = (
+        Candidate.query
+        .filter(
+            Candidate.target_role == role_title,
+            Candidate.feedback.isnot(None),
+        )
+        .order_by(Candidate.feedback_at.desc())
+        .limit(20)
+        .all()
+    )
+
+    if not reviewed:
+        return None
+
+    lines = []
+    for c in reviewed:
+        status = c.feedback.upper()
+        detail = f"{c.full_name} — {c.current_title or '?'} at {c.current_company or '?'}"
+        reason_parts = []
+        if c.feedback_reason:
+            reason_parts.append(c.feedback_reason)
+        if c.feedback_note:
+            reason_parts.append(c.feedback_note)
+        reason_str = f" (Reason: {'; '.join(reason_parts)})" if reason_parts else ""
+        lines.append(f"- {status}: {detail}{reason_str}")
+
+    return "\n".join(lines)
 
 
 def format_candidate_for_scoring(candidate: dict) -> str:
