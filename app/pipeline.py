@@ -63,6 +63,14 @@ def run_scoring_pipeline(
             ).first()
 
             if existing:
+                # Skip candidates that already have feedback (approved/rejected)
+                if existing.feedback:
+                    logger.info(
+                        "Skipping %s — already %s",
+                        existing.full_name,
+                        existing.feedback,
+                    )
+                    continue
                 candidate = existing
                 # Update fields
                 for key, value in normalized.items():
@@ -201,6 +209,14 @@ def run_linkedin_search_pipeline(
             ).first()
 
             if existing:
+                # Skip candidates that already have feedback (approved/rejected)
+                if existing.feedback:
+                    logger.info(
+                        "Skipping %s — already %s",
+                        existing.full_name,
+                        existing.feedback,
+                    )
+                    continue
                 candidate = existing
                 for key, value in normalized.items():
                     if key != "raw_data" and value:
@@ -210,10 +226,12 @@ def run_linkedin_search_pipeline(
                 candidate = Candidate(**normalized)
                 db.session.add(candidate)
 
-            # 2. Score
+            # 2. Score with feedback history
+            feedback_history = build_feedback_history(role_key)
             candidate_text = format_candidate_for_scoring(normalized)
             score_result = score_candidate(
-                anthropic_api_key, candidate_text, role_key, example_cvs
+                anthropic_api_key, candidate_text, role_key, example_cvs,
+                feedback_history=feedback_history,
             )
 
             candidate.score = score_result.get("score", 0)
@@ -305,7 +323,21 @@ def run_auto_sourcing_pipeline(
 
         # 2. Run each query via Serper and collect unique candidates
         serper_client = SerperClient(serper_api_key)
-        seen_urls = set()
+
+        # Pre-load URLs of candidates already reviewed to skip them entirely
+        reviewed = (
+            Candidate.query
+            .filter(Candidate.feedback.isnot(None))
+            .with_entities(Candidate.linkedin_url, Candidate.amplemarket_id)
+            .all()
+        )
+        seen_urls = {r.linkedin_url for r in reviewed if r.linkedin_url}
+        reviewed_ids = {r.amplemarket_id for r in reviewed}
+        logger.info(
+            "Auto-sourcing: pre-loaded %d reviewed candidate URLs to skip",
+            len(seen_urls),
+        )
+
         all_candidates = []
         query_failures = []
 
@@ -398,11 +430,27 @@ def run_auto_sourcing_pipeline(
         total_score = 0.0
 
         for normalized in all_candidates:
+            # Double-check: skip if this candidate was reviewed (in case they
+            # slipped through the URL filter with a different URL variant)
+            if normalized["amplemarket_id"] in reviewed_ids:
+                logger.info(
+                    "Skipping %s — already reviewed (ID match)",
+                    normalized.get("full_name", "?"),
+                )
+                continue
+
             existing = Candidate.query.filter_by(
                 amplemarket_id=normalized["amplemarket_id"]
             ).first()
 
             if existing:
+                if existing.feedback:
+                    logger.info(
+                        "Skipping %s — already %s",
+                        existing.full_name,
+                        existing.feedback,
+                    )
+                    continue
                 candidate = existing
                 for key, value in normalized.items():
                     if key != "raw_data" and value:

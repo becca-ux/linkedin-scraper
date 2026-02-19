@@ -65,6 +65,7 @@ def index():
     """Dashboard showing scored candidates."""
     role_filter = request.args.get("role")
     min_score = request.args.get("min_score", type=float)
+    status_filter = request.args.get("status")  # all, new, approved, rejected
 
     try:
         query = Candidate.query.filter(Candidate.score.isnot(None))
@@ -73,14 +74,29 @@ def index():
             query = query.filter(Candidate.target_role == role_filter)
         if min_score:
             query = query.filter(Candidate.score >= min_score)
+        if status_filter == "approved":
+            query = query.filter(Candidate.feedback == "approved")
+        elif status_filter == "rejected":
+            query = query.filter(Candidate.feedback == "rejected")
+        elif status_filter == "new":
+            query = query.filter(Candidate.feedback.is_(None))
 
         candidates = query.order_by(Candidate.score.desc()).all()
         recent_runs = (
             ScoringRun.query.order_by(ScoringRun.started_at.desc()).limit(10).all()
         )
+
+        # Counts for filter tabs
+        status_counts = {
+            "all": Candidate.query.filter(Candidate.score.isnot(None)).count(),
+            "new": Candidate.query.filter(Candidate.score.isnot(None), Candidate.feedback.is_(None)).count(),
+            "approved": Candidate.query.filter(Candidate.feedback == "approved").count(),
+            "rejected": Candidate.query.filter(Candidate.feedback == "rejected").count(),
+        }
     except Exception:
         candidates = []
         recent_runs = []
+        status_counts = {"all": 0, "new": 0, "approved": 0, "rejected": 0}
 
     roles = list(ROLE_PROFILES.values())
 
@@ -91,6 +107,8 @@ def index():
         recent_runs=recent_runs,
         current_role=role_filter,
         current_min_score=min_score,
+        current_status=status_filter,
+        status_counts=status_counts,
         role_keys=ROLE_PROFILES,
     )
 

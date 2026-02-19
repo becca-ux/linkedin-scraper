@@ -11,7 +11,32 @@
 <script>setTimeout(function(){ window.location.reload(); }, 10000);</script>
 {% endif %}
 
+<div style="display:flex; gap:6px; margin:20px 0 12px; flex-wrap:wrap;">
+    {% set st = current_status or '' %}
+    <a href="/?{% if current_role %}role={{ current_role }}&{% endif %}{% if current_min_score %}min_score={{ current_min_score }}{% endif %}"
+       style="padding:6px 16px; border-radius:20px; font-size:13px; font-weight:600; text-decoration:none;
+              {% if not st %}background:rgba(212,168,160,0.2); color:#e8b4a8; border:1px solid rgba(212,168,160,0.4);
+              {% else %}background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.5); border:1px solid rgba(255,255,255,0.08);{% endif %}">
+        All ({{ status_counts.all }})</a>
+    <a href="/?status=new{% if current_role %}&role={{ current_role }}{% endif %}{% if current_min_score %}&min_score={{ current_min_score }}{% endif %}"
+       style="padding:6px 16px; border-radius:20px; font-size:13px; font-weight:600; text-decoration:none;
+              {% if st == 'new' %}background:rgba(212,168,160,0.2); color:#e8b4a8; border:1px solid rgba(212,168,160,0.4);
+              {% else %}background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.5); border:1px solid rgba(255,255,255,0.08);{% endif %}">
+        New ({{ status_counts.new }})</a>
+    <a href="/?status=approved{% if current_role %}&role={{ current_role }}{% endif %}{% if current_min_score %}&min_score={{ current_min_score }}{% endif %}"
+       style="padding:6px 16px; border-radius:20px; font-size:13px; font-weight:600; text-decoration:none;
+              {% if st == 'approved' %}background:rgba(183,130,120,0.25); color:#e8b4a8; border:1px solid rgba(183,130,120,0.4);
+              {% else %}background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.5); border:1px solid rgba(255,255,255,0.08);{% endif %}">
+        Approved ({{ status_counts.approved }})</a>
+    <a href="/?status=rejected{% if current_role %}&role={{ current_role }}{% endif %}{% if current_min_score %}&min_score={{ current_min_score }}{% endif %}"
+       style="padding:6px 16px; border-radius:20px; font-size:13px; font-weight:600; text-decoration:none;
+              {% if st == 'rejected' %}background:rgba(140,120,160,0.2); color:#a898b8; border:1px solid rgba(140,120,160,0.3);
+              {% else %}background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.5); border:1px solid rgba(255,255,255,0.08);{% endif %}">
+        Rejected ({{ status_counts.rejected }})</a>
+</div>
+
 <form class="filters" method="GET" action="/">
+    {% if current_status %}<input type="hidden" name="status" value="{{ current_status }}">{% endif %}
     <select name="role">
         <option value="">All Roles</option>
         {% for role in roles %}
@@ -60,8 +85,14 @@
             <td>
                 {% if c.feedback == 'approved' %}
                 <span style="color:#e8b4a8; font-size:13px;">Approved</span>
+                {% if c.feedback_at %}
+                <span style="color:rgba(255,255,255,0.25); font-size:11px; display:block;">{{ c.feedback_at.strftime('%d %b %Y') }}</span>
+                {% endif %}
                 {% elif c.feedback == 'rejected' %}
                 <span style="color:#a898b8; font-size:13px;" title="{{ c.feedback_reason or '' }}">Rejected</span>
+                {% if c.feedback_reason %}
+                <span style="color:rgba(255,255,255,0.25); font-size:11px; display:block;">{{ c.feedback_reason }}</span>
+                {% endif %}
                 {% else %}
                 <span style="color:rgba(255,255,255,0.2); font-size:13px;">—</span>
                 {% endif %}
