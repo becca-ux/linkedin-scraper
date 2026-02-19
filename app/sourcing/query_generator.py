@@ -60,6 +60,7 @@ def _call_claude(client, system: str, user_message: str):
     return client.messages.create(
         model="claude-sonnet-4-5-20250929",
         max_tokens=1024,
+        temperature=0.2,
         system=system,
         messages=[{"role": "user", "content": user_message}],
     )

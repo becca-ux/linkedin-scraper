@@ -26,6 +26,12 @@
 </form>
 
 {% if candidates %}
+<p style="color:rgba(255,255,255,0.4); font-size:13px; margin-bottom:12px;">
+    {{ candidates|length }} candidate{{ 's' if candidates|length != 1 else '' }} stored
+    {%- if recent_runs %} across {{ recent_runs|selectattr('status','equalto','completed')|list|length }} run{{ 's' if recent_runs|selectattr('status','equalto','completed')|list|length != 1 else '' }}{% endif %}
+    {%- if current_role %} &middot; filtered by {{ current_role }}{% endif %}
+    {%- if current_min_score %} &middot; min score {{ current_min_score }}{% endif %}
+</p>
 <div class="card" style="padding:0; overflow:hidden;">
 <table>
     <thead>
