@@ -75,6 +75,59 @@ Education: BA Economics and Philosophy, University of Southampton
 """
 
 
+_SE_EXEMPLARS = """
+=== EXEMPLAR SE 1: Matthew Gill ===
+Location: London, UK
+Current Role: Senior Software Engineer at Alloy.ai (Jan 2023 - Present)
+
+- Developed full-stack solutions with focus on backend development using Java, TypeScript, and React
+- Proficient in Postgres, BigQuery, and Redis for performance and scalability optimization
+- Data Engineering Team Lead (Mar 2022 - Feb 2023): Led team of data engineers on scaling and monitoring big data pipelines
+- Data Engineer (Aug 2019 - Feb 2022): Designed, developed, and maintained scalable ETL processes
+- Identified and resolved production scaling issues by diagnosing root causes, ensuring smooth operations
+- Implemented Kanban workflow to increase team throughput predictability
+- Provided meaningful feedback to team members for career growth
+
+Education: UBC BASc Electrical Engineering (3.85 GPA)
+Tech Stack: React, TypeScript, Java, Redis, Postgres, BigQuery, REST API, Docker, Kubernetes, Python, Jenkins
+
+=== EXEMPLAR SE 2: Joshua Glover ===
+Location: London, UK (relocating from Sydney)
+Current Role: Technical Team Lead & Senior Software Engineer at Elula (Jan 2025 - Present)
+
+- Led Platform Engineering team, set company-wide standards and processes
+- Managed developer experience initiatives, coached team members, oversaw performance
+- Reduced incidents by >60% through Change Advisory Board and architecture reviews
+- AWS expertise: Lambda, ECS, Fargate, Terraform, API Gateway, VPC, EventBridge
+- Python-heavy backend, PostgreSQL databases, distributed computing (Spark)
+- Infrastructure as code (Terraform), CI/CD pipelines (GitHub Actions)
+- AWS Associate Solutions Architect certified (2020)
+
+Education: UNSW BEng Computer Engineering (First Class Honours)
+Tech Stack: Python, AWS (Lambda, ECS, Fargate, Terraform, API Gateway, VPC), PostgreSQL, Presto, Git, Docker, DataDog, Distributed Computing
+
+=== EXEMPLAR SE 3: Andrea Stella ===
+Location: London, UK
+Current Role: Software Engineer IV at PolyAI (Aug 2023 - Present)
+
+- SWE III → SWE IV promotion in 1.5 years (rapid progression)
+- Responsible for integrating customer telephony infrastructure with PolyAI platform
+- Engineered automation solutions reducing bot-building time, enabling faster deployments
+- Led internal tools creation and maintenance to optimize team workflow
+- Driven CI/CD pipelines improvements using GitLab/GitHub for code quality
+- Python and Go expertise, containerization with Docker and Kubernetes
+
+Previous Roles:
+- SWE III at PolyAI (May 2022 - Aug 2023): Developed AI-powered voice chatbots for call center optimization
+- DevOps Engineer at Sync Lab (Nov 2021 - Apr 2022): Automation, pipelines, containerization
+- Backend Developer at Sapienza University (May 2021 - Oct 2021): Go backend for earthquake early warning system
+
+Education: Sapienza Università di Roma, BSc Informatica
+Tech Stack: Python, Go, Bash, MySQL, CI/CD (GitLab/GitHub), Docker, Kubernetes, Terraform, VoIP protocols
+
+"""
+
+
 _CSM_EXEMPLARS = """
 === EXEMPLAR CSM 1: Lucy ===
 Location: London/UK
@@ -216,13 +269,51 @@ ROLE_PROFILES = {
             "No evidence of expansion revenue or commercial acumen",
         ],
     },
+    "se": {
+        "title": "Software Engineer",
+        "description": (
+            "Hook is a B2B SaaS company (Series A/B, ~60 people) based in London, "
+            "looking for a Software Engineer who can own full-stack systems from "
+            "architecture to production. The ideal candidate has 2+ years shipping "
+            "at high-growth startups, strong depth in Python/AWS/PostgreSQL (Hook's core stack), "
+            "a bias toward getting things done, and experience solving data/infrastructure "
+            "challenges at scale."
+        ),
+        "must_haves": [
+            "2+ years of production software engineering at a Series A-C SaaS startup",
+            "Proficiency in Python OR TypeScript/Node.js (Hook's primary languages)",
+            "Production experience with AWS OR Google Cloud (infrastructure, not just compute)",
+            "Experience with SQL databases (PostgreSQL, MySQL) and query optimization",
+            "Shipped multiple systems end-to-end (not just features; systems with ops/monitoring)",
+            "Comfortable debugging production issues and improving performance",
+        ],
+        "nice_to_haves": [
+            "Python + AWS + PostgreSQL (Hook's exact stack)",
+            "Data engineering or infrastructure background (pipelines, warehousing, ETL)",
+            "Team leadership or mentoring experience",
+            "Rapid internal progression (2+ promotions at same company)",
+            "Experience reducing production incidents or improving system reliability",
+            "Docker, Kubernetes, CI/CD pipeline expertise",
+            "Experience with Terraform or infrastructure-as-code",
+            "Based in or willing to relocate to London",
+        ],
+        "red_flags": [
+            "Only big-tech/enterprise experience — may struggle in startup pace",
+            "No experience with cloud infrastructure (AWS, GCP, etc.)",
+            "Only frontend development or no shipped production systems",
+            "Deep expertise in outdated/niche stack (C#/.NET monolith, PEGA, legacy Java) with no modern context",
+            "Very short tenures (<1 year) at multiple companies without progression",
+            "No evidence of ownership — always worked in large teams with rigid processes",
+            "No experience with data or system optimization",
+        ],
+    },
 }
 
 
 def get_profile(role_key: str) -> dict:
     """Get the ideal candidate profile for a role.
 
-    Valid role_keys: ae, csm
+    Valid role_keys: ae, csm, se
     """
     profile = ROLE_PROFILES.get(role_key)
     if not profile:
@@ -239,6 +330,8 @@ def get_example_cvs(role_key: str) -> str:
         return _AE_EXEMPLARS
     elif role_key == "csm":
         return _CSM_EXEMPLARS
+    elif role_key == "se":
+        return _SE_EXEMPLARS
     return ""
 
 
